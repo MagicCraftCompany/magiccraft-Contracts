@@ -24,10 +24,9 @@ const config = {
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {
-      forking: {
-        url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_KEY}`,
-        blockNumber: 11589707,
-      },
+      allowUnlimitedContractSize: true,
+      blockGasLimit: 100000000,
+      gas: 100000000,
     },
     rinkeby: {
       url: `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ALCHEMY_KEY}`,
@@ -37,19 +36,9 @@ const config = {
       url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_KEY}`,
       accounts: [process.env.MAINNET_PRIVKEY],
     },
-    matic: {
-      chainId: 137,
-      url: `https://polygon-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
-      accounts: [process.env.MAINNET_PRIVKEY],
-    },
-    mumbai: {
-      chainId: 80001,
-      url: `https://polygon-mumbai.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`,
-      accounts: [process.env.MUMBAI_PRIVKEY],
-    },
   },
   etherscan: {
-    apiKey: process.env.POLYSCAN_API,
+    apiKey: process.env.ETHERSCAN_API,
   },
   paths: {
     artifacts: "./artifacts",
