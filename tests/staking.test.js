@@ -82,7 +82,9 @@ describe("MCRT Staking Contract", function () {
 
       await this.MCRTStake.ClaimRewardPerPeriod(30, 0, {from: this.alice});
 
-      expect((await this.MCRTToken.balanceOf(this.alice)).toString()).to.equal("250");
+      expect((await this.MCRTToken.balanceOf(this.alice)).toString()).to.equal(
+        toBN(250).mul(E18).mul(30).div(365).toString()
+      );
     });
 
     it("test withdraw (alice) amount", async function () {
