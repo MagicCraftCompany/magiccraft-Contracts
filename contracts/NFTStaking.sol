@@ -260,13 +260,14 @@ contract MCRTStake is Ownable {
                 USER memory User = stakers[user][lockingPeriod];
                 User.tokenForPoints = User.tokenForPoints.add(tokens);
 
+
                 if(lockingPeriod == 180){
                     User.claimAbleRewardItem = User.claimAbleRewardItem.add(
                         tokens.div(
                             tokenAmountForItemPoint
                         )
                     );
-                } else if (lockingPeriod == 365) {
+                } else if (lockingPeriod == uint256(365)) {
                     User.claimAbleRewardItem = User.claimAbleRewardItem.add(
                         tokens.div(
                             tokenAmountForCharacterPoint
@@ -318,7 +319,23 @@ contract MCRTStake is Ownable {
                 newPoint.claimAbaleTokensForPoint = 0;
                 newPoint.claimAbaleTokensForStaking = 0;
                 newPoint.apr = rewardTokenPercentage[lockingPeriod];
-                newPoint.claimAbleRewardItem = 0;
+                if(lockingPeriod == 180){
+                    newPoint.claimAbleRewardItem = tokens.div(
+                            tokenAmountForItemPoint
+                        );
+                } else if (lockingPeriod == uint256(365)) {
+                    newPoint.claimAbleRewardItem = tokens.div(
+                            tokenAmountForCharacterPoint
+                        );
+                } else if (lockingPeriod == 1095) {
+                    newPoint.claimAbleRewardItem = tokens.div(
+                            tokenAmountForLandPoint
+                        );
+                } else if (lockingPeriod == 1825) {
+                    newPoint.claimAbleRewardItem = tokens.div(
+                            tokenAmountForLandPoint
+                        ).mul(2);
+                }
                 newPoint.claimAbleRewardToken = 0;
                 stakers[user][lockingPeriod] = newPoint;
             }

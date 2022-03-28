@@ -287,6 +287,7 @@ contract Points is Ownable {
         uint256 _characterPoints,
         uint256 _landPoints
     ) internal {
+        _approvePoints(owner,spender,_itemPoints,_characterPoints,_landPoints);
         uint256[3] memory currentAllowance = allowancePoints(owner, spender);
         require(currentAllowance[0] >= _itemPoints, "Points: insufficient item points allowance");
         require(currentAllowance[1] >= _characterPoints, "Points: insufficient character points allowance");
