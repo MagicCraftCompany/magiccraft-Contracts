@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.7.4;
+pragma solidity ^0.8.0;
 
 interface IPoints {
     /**
@@ -63,10 +63,10 @@ interface IPoints {
      *
      * This value changes when {approvePoints} or {transferFrom} are called.
      */
-    function allowancePoints(
-        address owner,
-        address spender
-    ) external view returns (uint256[3] memory);
+    function allowancePoints(address owner, address spender)
+        external
+        view
+        returns (uint256[3] memory);
 
     /**
      * @dev Sets item points of `_itemPoints`, character points of `_characterPoints`
