@@ -13,7 +13,6 @@ contract MCRTStaking is OwnableUpgradeable {
 
     event Stake(uint256 stakeId, address staker);
     event Unstake(uint256 stakeId, address unstaker);
-    event getRewardPoint(uint256 stakeId, address unstaker);
 
     struct StakingInfo {
         uint256 id;
@@ -102,11 +101,11 @@ contract MCRTStaking is OwnableUpgradeable {
         rewardPerTokenStored = rewardPerToken();
         lastUpdateTime = block.timestamp;
 
-        userRewardPerTokenPaid[account_] = rewardPerTokenStored;
         for (uint256 i = 0; i < stakingNonce[account_]; i++) {
             if (stakingInfoForAddress[account_][i].tokensStakedWithBonus != 0)
                 rewards[account_][i] = earned(account_, i);
         }
+        userRewardPerTokenPaid[account_] = rewardPerTokenStored;
 
         _;
     }
@@ -171,7 +170,7 @@ contract MCRTStaking is OwnableUpgradeable {
         stakingToken.safeTransferFrom(msg.sender, address(this), amount_);
         emit Stake(stakingNonce[msg.sender], msg.sender);
     }
-    
+
     /** Unstake function
     @param stakeId_ the stake id to unstake
      */
@@ -202,13 +201,6 @@ contract MCRTStaking is OwnableUpgradeable {
         emit Unstake(stakeId_, msg.sender);
 
         stakingToken.safeTransfer(msg.sender, tokensTotal);
-    }
-
-    /** The function called to get the reward for user's stake
-    @param stakeId_ the stake id to unstake
-     */
-    function getTokenReward(uint256 stakeId_) external view returns(uint256) {
-        return rewards[msg.sender][stakeId_];
     }
 
     /** The function called to get the reward for user's stake
@@ -249,8 +241,6 @@ contract MCRTStaking is OwnableUpgradeable {
             pointRewards[timelock][1],
             pointRewards[timelock][2]
         );
-
-        emit getRewardPoint(stakeId_, msg.sender);
     }
 
     /** 
@@ -273,15 +263,17 @@ contract MCRTStaking is OwnableUpgradeable {
     @param durations_ an array of the allowed staking durations
     @param rewardsPoints_ the multiplier dor all staking durations
      */
-    function setPointRewards(uint256 durations_, uint256[3] calldata rewardsPoints_)
+    function setPointRewards(uint256[] calldata durations_, uint256[3][] calldata rewardsPoints_)
         external
         onlyOwner
     {
-        pointRewards[durations_] = [
-            rewardsPoints_[0],
-            rewardsPoints_[1],
-            rewardsPoints_[2]
-        ];
+        for (uint256 i = 0; i < durations_.length; i++) {
+            pointRewards[durations_[i]] = [
+                rewardsPoints_[i][0],
+                rewardsPoints_[i][1],
+                rewardsPoints_[i][2]
+            ];
+        }
     }
 
     /** 
@@ -294,19 +286,8 @@ contract MCRTStaking is OwnableUpgradeable {
         onlyOwner
     {
         for (uint256 i = 0; i < durations_.length; i++) {
-            minStakeTokensForPoint[durations_[i]] = amounts_[i] * (10 ** 18);
+            minStakeTokensForPoint[durations_[i]] = amounts_[i];
         }
-    }
-
-    /** 
-    @dev Gets the min stake token for point and the allowed locking durations
-    */
-    function getMinStakeTokensForPoint(uint256 lockTime_)
-        external
-        view
-        returns(uint256)
-    {
-        return minStakeTokensForPoint[lockTime_];
     }
 
     /** 
