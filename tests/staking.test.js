@@ -59,15 +59,11 @@ describe("MCRT Staking Contract", function () {
         toBN(300).mul(E9).toString(),
       ]
     );
-    await this.MCRTStake.setPointRewards(
-      [180 * this.dayTime, 365 * this.dayTime, 365 * 3 * this.dayTime, 365 * 5 * this.dayTime],
-      [
-        [1, 0, 0],
-        [0, 1, 0],
-        [0, 0, 1],
-        [0, 0, 2],
-      ]
-    );
+    await this.MCRTStake.setPointReward(180 * this.dayTime, [1, 0, 0]);
+    await this.MCRTStake.setPointReward(365 * this.dayTime, [0, 1, 0]);
+    await this.MCRTStake.setPointReward(365 * 3 * this.dayTime, [0, 0, 1]);
+    await this.MCRTStake.setPointReward(365 * 5 * this.dayTime, [0, 0, 2]);
+
     await this.MCRTStake.setMinStakeTokensForPoint(
       [180 * this.dayTime, 365 * this.dayTime, 365 * 3 * this.dayTime, 365 * 5 * this.dayTime],
       [
@@ -193,73 +189,4 @@ describe("MCRT Staking Contract", function () {
       expectEvent(res, "Unstake", {stakeId: toBN(0), unstaker: this.alice});
     });
   });
-
-  // describe("should claim & withdraw the correct reward amount", function () {
-  //   it("test claim workflow for 30 days", async function () {
-  //     await this.MCRTStake.STAKE(this.alice, toBN(1000).mul(E18).toString(), 30, 0, {from: this.alice});
-  //     await time.increase(30 * 3600 * 24);
-
-  //     await this.MCRTStake.ClaimRewardPerPeriod(30, 0, {from: this.alice});
-
-  //     expect((await this.MCRTToken.balanceOf(this.alice)).toString()).to.equal(
-  //       toBN(250).mul(E18).mul(30).div(365).toString()
-  //     );
-  //   });
-
-  //   it("test withdraw (alice) amount", async function () {
-  //     await this.MCRTStake.WithdrawForStakingPerPeriod(30, 0, {from: this.alice});
-
-  //     expect((await this.MCRTToken.balanceOf(this.alice)).toString()).to.equal(
-  //       toBN(250).mul(E18).mul(30).div(365).toString()
-  //     );
-  //   });
-
-  //   it("test claim function for 90, 180 days pools", async function () {
-  //     await this.MCRTStake.STAKE(this.bob, toBN(1000).mul(E18).toString(), 90, 0, {from: this.bob});
-  //     await this.MCRTStake.STAKE(this.carol, toBN(1000).mul(E18).toString(), 180, 0, {from: this.carol});
-
-  //     // after 90 days
-  //     await time.increase(90 * 3600 * 24);
-  //     await this.MCRTStake.ClaimRewardPerPeriod(90, 0, {from: this.bob});
-
-  //     // after 180 days
-  //     await time.increase(90 * 3600 * 24);
-
-  //     await this.MCRTStake.ClaimRewardPerPeriod(30, 0, {from: this.bob});
-  //     await this.MCRTStake.ClaimRewardPerPeriod(90, 0, {from: this.bob});
-
-  //     expect((await this.MCRTToken.balanceOf(this.bob)).toString()).to.equal(
-  //       toBN(1000 * 180)
-  //         .mul(E18)
-  //         .div(toBN(365))
-  //         .toString()
-  //     ) &&
-  //       expect((await this.MCRTToken.balanceOf(this.carol)).toString()).to.equal(
-  //         toBN(750 * 180)
-  //           .mul(E18)
-  //           .div(toBN(365))
-  //           .toString()
-  //       );
-  //   });
-
-  //   it("test withdraw (bob) amounts", async function () {
-  //     const withdraw = await this.MCRTStake.WithdrawForStakingPerPeriod(90, 0, {from: this.bob});
-
-  //     expectEvent(withdraw, "UNSTAKED", {
-  //       staker: this.bob,
-  //       LockingPeriod: 90,
-  //       tokens: toBN(1000).mul(E18),
-  //     });
-  //   });
-
-  //   it("test withdraw (carol) amounts", async function () {
-  //     const widthraw = await this.MCRTStake.WithdrawForStakingPerPeriod(180, 0, {from: this.carol});
-
-  //     expectEvent(widthraw, "UNSTAKED", {
-  //       staker: this.carol,
-  //       LockingPeriod: 180,
-  //       tokens: toBN(1000).mul(E18),
-  //     });
-  //   });
-  // });
 });

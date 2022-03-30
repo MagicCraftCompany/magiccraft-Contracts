@@ -263,17 +263,11 @@ contract MCRTStaking is OwnableUpgradeable {
     @param durations_ an array of the allowed staking durations
     @param rewardsPoints_ the multiplier dor all staking durations
      */
-    function setPointRewards(uint256[] calldata durations_, uint256[3][] calldata rewardsPoints_)
+    function setPointReward(uint256 durations_, uint256[3] calldata rewardsPoints_)
         external
         onlyOwner
     {
-        for (uint256 i = 0; i < durations_.length; i++) {
-            pointRewards[durations_[i]] = [
-                rewardsPoints_[i][0],
-                rewardsPoints_[i][1],
-                rewardsPoints_[i][2]
-            ];
-        }
+        pointRewards[durations_] = [rewardsPoints_[0], rewardsPoints_[1], rewardsPoints_[2]];
     }
 
     /** 
