@@ -214,21 +214,15 @@ contract Points is Ownable {
         uint256 _itemPoints,
         uint256 _characterPoints,
         uint256 _landPoints
-    ) external  {
+    ) external onlyOwner {
         require(account != address(0), "mint to the zero address");
 
-        require(
-            totalItemPoints + _itemPoints <= MAX_TOTAL_ITEM_POINT,
-            "Max item supply overflow"
-        );
+        require(totalItemPoints + _itemPoints <= MAX_TOTAL_ITEM_POINT, "Max item supply overflow");
         require(
             totalCharacterPoints + _characterPoints <= MAX_TOTAL_CHARACTER_POINT,
             "Max character supply overflow"
         );
-        require(
-            totalLandPoints + _landPoints <= MAX_TOTAL_LAND_POINT,
-            "Max land supply overflow"
-        );
+        require(totalLandPoints + _landPoints <= MAX_TOTAL_LAND_POINT, "Max land supply overflow");
 
         totalItemPoints += _itemPoints;
         totalCharacterPoints += _characterPoints;
@@ -330,10 +324,7 @@ contract Points is Ownable {
         _approvePoints(owner, spender, _itemPoints, _characterPoints, _landPoints);
         uint256[3] memory currentAllowance = allowancePoints(owner, spender);
         require(currentAllowance[0] >= _itemPoints, "insufficient item points allowance");
-        require(
-            currentAllowance[1] >= _characterPoints,
-            "insufficient character points allowance"
-        );
+        require(currentAllowance[1] >= _characterPoints, "insufficient character points allowance");
         require(currentAllowance[2] >= _landPoints, "insufficient land points allowance");
 
         uint256 allowanceItemPoints = currentAllowance[0] - _itemPoints;
