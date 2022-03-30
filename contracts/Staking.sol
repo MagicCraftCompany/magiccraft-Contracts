@@ -47,6 +47,7 @@ contract MCRTStaking is OwnableUpgradeable {
     uint256 public totalTokensStaked;
     uint256 public pTotalTokensStaked;
     uint256 public totalTokensStakedWithBonusTokens;
+    uint256 public totalRewardsLeft;
 
     address public pointAddress;
 
@@ -102,7 +103,7 @@ contract MCRTStaking is OwnableUpgradeable {
 
         userRewardPerTokenPaid[account_] = rewardPerTokenStored;
         for (uint256 i = 0; i < stakingNonce[account_]; i++) {
-            if (stakingInfoForAddress[account_][stakeId_].tokensStakedWithBonus != 0)
+            if (stakingInfoForAddress[account_][i].tokensStakedWithBonus != 0)
                 rewards[account_][i] = earned(account_, i);
         }
 
@@ -206,6 +207,7 @@ contract MCRTStaking is OwnableUpgradeable {
     @param stakeId_ the stake id to unstake
      */
     function getPointReward(uint256 stakeId_) external {
+        StakingInfo memory info = stakingInfoForAddress[msg.sender][stakeId_];
         require(info.option, "Invalid staking option");
         require(!info.withdrawnPoint, "Already withdrawn");
 
@@ -217,7 +219,10 @@ contract MCRTStaking is OwnableUpgradeable {
      */
     function getRewardInternal(uint256 stakeId_) internal {
         uint256 reward = rewards[msg.sender][stakeId_];
+        require(reward <= totalRewardsLeft, "Not enough reward token remains");
+
         rewards[msg.sender][stakeId_] = 0;
+        totalRewardsLeft -= reward;
         stakingToken.safeTransfer(msg.sender, reward);
     }
 
@@ -300,6 +305,24 @@ contract MCRTStaking is OwnableUpgradeable {
     function setRewardRate(uint256 rewardRate_) external onlyOwner {
         require(rewardRate_ != 0, "Cannot have reward Rate 0");
         rewardRate = rewardRate_;
+    }
+
+    /** 
+    @dev Transfer Point contract ownership
+    @param newOwner_ new owner address
+    */
+    function transferPointOwnership(address newOwner_) external onlyOwner {
+        require(newOwner_ != address(0), "Cannot be address(0)");
+        IPoints(pointAddress).transferOwnership(newOwner_);
+    }
+
+    /** 
+    @dev Add token rewards to contract
+    @param amount_ the token amount for reward
+    */
+    function addTokenRewards(uint256 amount_) external {
+        stakingToken.safeTransferFrom(msg.sender, address(this), amount_);
+        totalRewardsLeft += amount_;
     }
 
     /**
