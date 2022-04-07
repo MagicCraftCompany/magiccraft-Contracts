@@ -177,6 +177,7 @@ contract MCRTStaking is OwnableUpgradeable {
     function unstake(uint256 stakeId_) external updateReward(msg.sender) {
         StakingInfo storage info = stakingInfoForAddress[msg.sender][stakeId_];
         require(info.timeToUnlock <= block.timestamp, "Not reached to timeToUnlock yet");
+        require(info.owner != address(0), "Already unstaked");
 
         if (!info.option) {
             getRewardInternal(stakeId_);
@@ -203,6 +204,43 @@ contract MCRTStaking is OwnableUpgradeable {
         stakingToken.safeTransfer(msg.sender, tokensTotal);
     }
 
+    /** batch Unstake function
+    @param stakeIds_ the stake id to unstake
+     */
+    function batchUnstake(uint256[] memory stakeIds_) external updateReward(msg.sender) {
+        require(stakeIds_.length != 0, "Invalid stake id array");
+
+        for (uint256 i = 0; i < stakeIds_.length; i++) {
+            StakingInfo storage info = stakingInfoForAddress[msg.sender][stakeIds_[i]];
+            require(info.timeToUnlock <= block.timestamp, "Not reached to timeToUnlock yet");
+            require(info.owner != address(0), "Already unstaked");
+
+            if (!info.option) {
+                getRewardInternal(stakeIds_[i]);
+
+                totalTokensStaked -= info.tokensStaked;
+                totalTokensStakedWithBonusTokens -= info.tokensStakedWithBonus;
+                balances[msg.sender] -= info.tokensStakedWithBonus;
+                tokensStakedByAddress[msg.sender] -= info.tokensStaked;
+                tokensStakedWithBonusByAddress[msg.sender] -= info.tokensStakedWithBonus;
+            } else {
+                pTotalTokensStaked -= info.tokensStaked;
+                pBalances[msg.sender] -= info.tokensStaked;
+                tokensStakedByAddress[msg.sender] -= info.tokensStaked;
+
+                if (!info.withdrawnPoint) getPointInternal(info.id);
+            }
+
+            uint256 tokensTotal = info.tokensStaked;
+
+            delete stakingInfoForAddress[msg.sender][stakeIds_[i]];
+
+            emit Unstake(stakeIds_[i], msg.sender);
+
+            stakingToken.safeTransfer(msg.sender, tokensTotal);
+        }
+    }
+
     /** The function called to get the reward for user's stake
     @param stakeId_ the stake id to unstake
      */
@@ -212,6 +250,21 @@ contract MCRTStaking is OwnableUpgradeable {
         require(!info.withdrawnPoint, "Already withdrawn");
 
         getPointInternal(stakeId_);
+    }
+
+    /** The function called to get the reward for user's stake
+    @param stakeIds_ the stake id to unstake
+     */
+    function batchGetPointReward(uint256[] memory stakeIds_) external {
+        require(stakeIds_.length != 0, "Invalid stake id array");
+
+        for (uint256 i = 0; i < stakeIds_.length; i++) {
+            StakingInfo memory info = stakingInfoForAddress[msg.sender][stakeIds_[i]];
+            require(info.option, "Invalid staking option");
+            require(!info.withdrawnPoint, "Already withdrawn");
+
+            getPointInternal(stakeIds_[i]);
+        }
     }
 
     /** The function called to get the reward for user's stake
