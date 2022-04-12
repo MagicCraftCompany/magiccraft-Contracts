@@ -13,8 +13,6 @@ import "solidity-coverage";
 import "hardhat-contract-sizer";
 
 //if (!process.env.MNEMONICS) throw new Error("MNEMONICS missing from .env file");
-if (!process.env.RINKEBY_PRIVKEY)
-  throw new Error("RINKEBY_PRIVKEY missing from .env file");
 if (!process.env.MAINNET_PRIVKEY)
   throw new Error("MAINNET_PRIVKEY missing from .env file");
 
@@ -28,17 +26,17 @@ const config = {
       blockGasLimit: 100000000,
       gas: 100000000,
     },
-    rinkeby: {
-      url: `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ALCHEMY_KEY}`,
-      accounts: [process.env.RINKEBY_PRIVKEY],
+    bsc: {
+      url: `https://bsc-dataseed.binance.org/`,
+      accounts: [process.env.MAINNET_PRIVKEY],
     },
-    live: {
-      url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_KEY}`,
+    testnet: {
+      url: `https://data-seed-prebsc-1-s1.binance.org:8545/`,
       accounts: [process.env.MAINNET_PRIVKEY],
     },
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API,
+    apiKey: process.env.BSCSCAN_API,
   },
   paths: {
     artifacts: "./artifacts",

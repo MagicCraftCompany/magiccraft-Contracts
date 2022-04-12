@@ -4,11 +4,13 @@ const {BigNumber} = require("ethers");
 const hre = require("hardhat");
 const {web3: any} = require("hardhat");
 const PointArt = hre.artifacts.require("Points");
-const MCRTStakeArt = hre.artifacts.require("MCRTStake");
+const MCRTStakeArt = hre.artifacts.require("MCRTStaking");
 const MCRTTokenArt = hre.artifacts.require("MCRTToken");
 
 const toBN = (n) => new BN(n);
 const E18 = toBN(10).pow(toBN(18));
+const E11 = toBN(10).pow(toBN(11));
+const E9 = toBN(10).pow(toBN(9));
 
 describe("MCRT Staking Contract", function () {
   before("Deploy contract", async function () {
@@ -24,12 +26,53 @@ describe("MCRT Staking Contract", function () {
 
     this.Point = await PointArt.new();
     this.MCRTToken = await MCRTTokenArt.new();
-    this.MCRTStake = await MCRTStakeArt.new(this.MCRTToken.address, this.Point.address);
+    this.MCRTStake = await MCRTStakeArt.new();
+    await this.MCRTStake.initialize(this.MCRTToken.address, this.Point.address, toBN(1).mul(E18).toString());
 
     // Transfer rewards tokens to staking contract
-    this.totalReward = 20000;
-    await this.MCRTToken.approve(this.MCRTStake.address, this.totalReward);
-    await this.MCRTStake.ADDFUNDS(this.totalReward);
+    // 30 days  : 25%
+    // 90 days  : 50%
+    // 180 days : 75%
+    // 1 year   : 100%
+    // 3 years  : 150%
+    // 5 years  : 200%
+    this.dayTime = 3600 * 24;
+
+    this.totalReward = 20000000;
+    await this.MCRTToken.approve(this.MCRTStake.address, toBN(this.totalReward).mul(E18).toString());
+    await this.MCRTStake.addTokenRewards(toBN(this.totalReward).mul(E18).toString());
+    await this.MCRTStake.setBonusMultiplier(
+      [
+        30 * this.dayTime,
+        90 * this.dayTime,
+        180 * this.dayTime,
+        365 * this.dayTime,
+        365 * 3 * this.dayTime,
+        365 * 5 * this.dayTime,
+      ],
+      [
+        toBN(125).mul(E9).toString(),
+        toBN(150).mul(E9).toString(),
+        toBN(175).mul(E9).toString(),
+        toBN(200).mul(E9).toString(),
+        toBN(250).mul(E9).toString(),
+        toBN(300).mul(E9).toString(),
+      ]
+    );
+    await this.MCRTStake.setPointReward(180 * this.dayTime, [1, 0, 0]);
+    await this.MCRTStake.setPointReward(365 * this.dayTime, [0, 1, 0]);
+    await this.MCRTStake.setPointReward(365 * 3 * this.dayTime, [0, 0, 1]);
+    await this.MCRTStake.setPointReward(365 * 5 * this.dayTime, [0, 0, 2]);
+
+    await this.MCRTStake.setMinStakeTokensForPoint(
+      [180 * this.dayTime, 365 * this.dayTime, 365 * 3 * this.dayTime, 365 * 5 * this.dayTime],
+      [
+        toBN(175).mul(E18).toString(),
+        toBN(200).mul(E18).toString(),
+        toBN(250).mul(E18).toString(),
+        toBN(300).mul(E18).toString(),
+      ]
+    );
 
     // Transfer & Approve tokens
     await this.MCRTToken.transfer(this.alice, toBN(1000).mul(E18).toString());
@@ -46,101 +89,104 @@ describe("MCRT Staking Contract", function () {
   beforeEach(async function () {});
 
   describe("should set correct state variables", function () {
-    it("(1) check totalAmountForReward variable", async function () {
-      expect((await this.MCRTStake.totalAmountForReward()).toString()).to.eq(String(this.totalReward));
+    it("(1) check totalRewardsLeft variable", async function () {
+      expect((await this.MCRTStake.totalRewardsLeft()).toString()).to.eq(toBN(this.totalReward).mul(E18).toString());
     });
 
     it("(2) check MCRTStake contract address", async function () {
-      expect(await this.MCRTStake.MCRT()).to.equal(this.MCRTToken.address);
+      expect(await this.MCRTStake.stakingToken()).to.equal(this.MCRTToken.address);
     });
 
     it("(3) check Points contract address", async function () {
-      expect(await this.MCRTStake.Points()).to.equal(this.Point.address);
+      expect(await this.MCRTStake.pointAddress()).to.equal(this.Point.address);
     });
 
-    // it("(4) check MCRTPrice variable", async function () {
-    //   expect((await this.MCRTStake.MCRTPrice()).toString()).to.equal("5");
-    // });
-
-    // it("(5) check MCRTDecimals variable", async function () {
-    //   expect((await this.MCRTStake.MCRTDecimals()).toString()).to.equal("18");
-    // });
-
-    // it("(6) check PointPrice variable", async function () {
-    //   expect((await this.MCRTStake.PointPrice()).toString()).to.equal("2");
-    // });
-
-    // it("(7) check PointDecimals variable", async function () {
-    //   expect((await this.MCRTStake.PointDecimals()).toString()).to.equal("18");
-    // });
-  });
-
-  describe("should claim & withdraw the correct reward amount", function () {
-    it("test claim workflow for 30 days", async function () {
-      await this.MCRTStake.STAKE(this.alice, toBN(1000).mul(E18).toString(), 30, 0, {from: this.alice});
-      await time.increase(30 * 3600 * 24);
-
-      await this.MCRTStake.ClaimRewardPerPeriod(30, 0, {from: this.alice});
-
-      expect((await this.MCRTToken.balanceOf(this.alice)).toString()).to.equal(
-        toBN(250).mul(E18).mul(30).div(365).toString()
-      );
-    });
-
-    it("test withdraw (alice) amount", async function () {
-      await this.MCRTStake.WithdrawForStakingPerPeriod(30, 0, {from: this.alice});
-
-      expect((await this.MCRTToken.balanceOf(this.alice)).toString()).to.equal(
-        toBN(250).mul(E18).mul(30).div(365).toString()
-      );
-    });
-
-    it("test claim function for 90, 180 days pools", async function () {
-      await this.MCRTStake.STAKE(this.bob, toBN(1000).mul(E18).toString(), 90, 0, {from: this.bob});
-      await this.MCRTStake.STAKE(this.carol, toBN(1000).mul(E18).toString(), 180, 0, {from: this.carol});
-
-      // after 90 days
-      await time.increase(90 * 3600 * 24);
-      await this.MCRTStake.ClaimRewardPerPeriod(90, 0, {from: this.bob});
-
-      // after 180 days
-      await time.increase(90 * 3600 * 24);
-
-      await this.MCRTStake.ClaimRewardPerPeriod(30, 0, {from: this.bob});
-      await this.MCRTStake.ClaimRewardPerPeriod(90, 0, {from: this.bob});
-
-      expect((await this.MCRTToken.balanceOf(this.bob)).toString()).to.equal(
-        toBN(1000 * 180)
-          .mul(E18)
-          .div(toBN(365))
-          .toString()
+    it("(4) check bonusTokenMultiplier variable", async function () {
+      expect((await this.MCRTStake.bonusTokenMultiplier(30 * this.dayTime)).toString()).to.equal(
+        toBN(125).mul(E9).toString()
       ) &&
-        expect((await this.MCRTToken.balanceOf(this.carol)).toString()).to.equal(
-          toBN(750 * 180)
-            .mul(E18)
-            .div(toBN(365))
-            .toString()
+        expect((await this.MCRTStake.bonusTokenMultiplier(90 * this.dayTime)).toString()).to.equal(
+          toBN(150).mul(E9).toString()
+        ) &&
+        expect((await this.MCRTStake.bonusTokenMultiplier(180 * this.dayTime)).toString()).to.equal(
+          toBN(175).mul(E9).toString()
+        ) &&
+        expect((await this.MCRTStake.bonusTokenMultiplier(365 * this.dayTime)).toString()).to.equal(
+          toBN(200).mul(E9).toString()
+        ) &&
+        expect((await this.MCRTStake.bonusTokenMultiplier(365 * 3 * this.dayTime)).toString()).to.equal(
+          toBN(250).mul(E9).toString()
+        ) &&
+        expect((await this.MCRTStake.bonusTokenMultiplier(365 * 5 * this.dayTime)).toString()).to.equal(
+          toBN(300).mul(E9).toString()
         );
     });
 
-    it("test withdraw (bob) amounts", async function () {
-      const withdraw = await this.MCRTStake.WithdrawForStakingPerPeriod(90, 0, {from: this.bob});
-
-      expectEvent(withdraw, "UNSTAKED", {
-        staker: this.bob,
-        LockingPeriod: 90,
-        tokens: toBN(1000).mul(E18),
-      });
+    it("(5) check minStakeTokensForPoint variable", async function () {
+      expect((await this.MCRTStake.minStakeTokensForPoint(180 * this.dayTime)).toString()).to.equal(
+        toBN(175).mul(E18).toString()
+      ) &&
+        expect((await this.MCRTStake.minStakeTokensForPoint(365 * this.dayTime)).toString()).to.equal(
+          toBN(200).mul(E18).toString()
+        ) &&
+        expect((await this.MCRTStake.minStakeTokensForPoint(365 * 3 * this.dayTime)).toString()).to.equal(
+          toBN(250).mul(E18).toString()
+        ) &&
+        expect((await this.MCRTStake.minStakeTokensForPoint(365 * 5 * this.dayTime)).toString()).to.equal(
+          toBN(300).mul(E18).toString()
+        );
     });
 
-    it("test withdraw (carol) amounts", async function () {
-      const widthraw = await this.MCRTStake.WithdrawForStakingPerPeriod(180, 0, {from: this.carol});
+    it("(6) check rewardRate variable", async function () {
+      expect((await this.MCRTStake.rewardRate()).toString()).to.equal(toBN(1).mul(E18).toString());
+    });
 
-      expectEvent(widthraw, "UNSTAKED", {
-        staker: this.carol,
-        LockingPeriod: 180,
-        tokens: toBN(1000).mul(E18),
+    it("(7) check stakingEnabled variable", async function () {
+      expect(await this.MCRTStake.stakingEnabled()).to.equal(true);
+    });
+  });
+
+  describe("should calculate the correct rewards & unstake after locktime", function () {
+    it("test claimable rewards in 30 days staking pool", async function () {
+      await this.MCRTStake.stake(toBN(100).mul(E18).toString(), 30 * this.dayTime, 0, {from: this.alice});
+      await time.increase(3600 * 24);
+
+      expect((await this.MCRTStake.earned(this.alice, 0)).toString()).to.equal(toBN(86400).mul(E18).toString()) &&
+        expect((await this.MCRTStake.totalTokensStakedWithBonusTokens()).toString()).to.equal(
+          toBN(125).mul(E18).toString()
+        );
+    });
+
+    it("test claimable rewards in 180 days staking pool", async function () {
+      await this.MCRTStake.stake(toBN(100).mul(E18).toString(), 180 * this.dayTime, 0, {
+        from: this.alice,
       });
+
+      await time.increase(3600 * 24);
+
+      expect((await this.MCRTStake.rewards(this.alice, 0)).toString()).to.equal(toBN(86401).mul(E18).toString()) &&
+        expect((await this.MCRTStake.rewards(this.alice, 1)).toString()).to.equal(toBN(0).mul(E18).toString()) &&
+        expect((await this.MCRTStake.earned(this.alice, 1)).toString()).to.equal(
+          toBN(86400).mul(toBN(175)).div(toBN(300)).mul(E18).toString()
+        ) &&
+        expect((await this.MCRTStake.earned(this.alice, 0)).toString()).to.equal(
+          toBN(86400).mul(toBN(125)).div(toBN(300)).mul(E18).add(toBN(86401).mul(E18)).toString()
+        ) &&
+        expect((await this.MCRTStake.totalTokensStakedWithBonusTokens()).toString()).to.equal(
+          toBN(300).mul(E18).toString()
+        );
+    });
+
+    it("revert unstake before timeToUnlock", async function () {
+      await expectRevert(this.MCRTStake.unstake(0, {from: this.alice}), "Not reached to timeToUnlock yet");
+      await expectRevert(this.MCRTStake.unstake(1, {from: this.alice}), "Not reached to timeToUnlock yet");
+    });
+
+    it("test unstaking after timeToUnlock", async function () {
+      await time.increase(3600 * 24 * 28);
+
+      const res = await this.MCRTStake.unstake(0, {from: this.alice});
+      expectEvent(res, "Unstake", {stakeId: toBN(0), unstaker: this.alice});
     });
   });
 });
