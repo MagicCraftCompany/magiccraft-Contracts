@@ -59,6 +59,7 @@
         "@openzeppelin/contracts": "^4.1.0",
         "@openzeppelin/contracts-upgradeable": "^4.2.0",
         "@truffle/hdwallet-provider": "^1.4.0",
+        "axios": "^0.27.0",
         "ethereum-waffle": "^3.4.0",
         "ganache-cli": "^6.12.2",
         "hardhat-typechain": "^0.3.4",
