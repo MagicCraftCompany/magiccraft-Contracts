@@ -9,6 +9,8 @@ describe("Starting the test suite", () => {
     [alice, bob] = await ethers.getSigners();
     const MagicNFT = await ethers.getContractFactory("MagicNFT");
     nft = await MagicNFT.deploy();
+
+    await nft.initialize("MagicCraft", "MCNFT", 500, alice.address, bob.address);
   });
 
   it("Test: Mint Success", async function () {
@@ -16,7 +18,6 @@ describe("Starting the test suite", () => {
     const whitelisted = await whitelist.createWhiteList(bob.address);
     console.log(whitelisted);
 
-    await nft.initialize("MagicCraft", "MCNFT", 500, alice.address, bob.address);
     await nft.connect(bob).whiteListMint(whitelisted, 1, {value: ethers.utils.parseEther("0.75")});
 
     const owner = await nft.ownerOf(1);
