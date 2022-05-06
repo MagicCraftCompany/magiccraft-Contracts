@@ -1,7 +1,7 @@
 const {expectRevert} = require("@openzeppelin/test-helpers");
 const {expect} = require("chai");
 const hre = require("hardhat");
-const MCRTNFTArt = hre.artifacts.require("MCRTNFT");
+const MCRTNFTArt = hre.artifacts.require("MagicNFT");
 
 describe("MCRTNFT Contract", function () {
   before("Deploy contract", async function () {
@@ -12,8 +12,13 @@ describe("MCRTNFT Contract", function () {
     this.bob = bob;
     this.carol = carol;
     this.MCRTNFT = await MCRTNFTArt.new("MCRT NFT", "MCRTNFT", this.Max_Supply);
+    await this.MCRTNFT.initialize("MCRT NFT", "MCRTNFT", this.Max_Supply, this.owner, this.owner);
 
     await this.MCRTNFT.setBaseURI("baseuri-string");
+
+    await this.MCRTNFT.ownerMint(3);
+    await this.MCRTNFT.safeTransferFrom(this.owner, this.alice, 1, {from: this.owner});
+    await this.MCRTNFT.safeTransferFrom(this.owner, this.bob, 2, {from: this.owner});
   });
 
   beforeEach(async function () {});
@@ -28,37 +33,7 @@ describe("MCRTNFT Contract", function () {
     });
 
     it("(3) check baseURI variable", async function () {
-      expect((await this.MCRTNFT.baseURI()).toString()).to.eq("baseuri-string");
-    });
-  });
-
-  describe("check mint function workflows", function () {
-    it("test adminMint", async function () {
-      await this.MCRTNFT.adminMint(1, this.alice);
-
-      expect((await this.MCRTNFT.balanceOf(this.alice)).toString()).to.eq("1");
-    });
-
-    it("test multiMint", async function () {
-      await this.MCRTNFT.multiMint([this.bob, this.carol]);
-
-      expect((await this.MCRTNFT.balanceOf(this.bob)).toString()).to.eq("1");
-      expect((await this.MCRTNFT.balanceOf(this.carol)).toString()).to.eq("1");
-    });
-
-    it("revert adminMint from not owner", async function () {
-      await expectRevert(this.MCRTNFT.adminMint(1, this.alice, {from: this.bob}), "Ownable: caller is not the owner");
-    });
-
-    it("revert multiMint from not owner", async function () {
-      await expectRevert(
-        this.MCRTNFT.multiMint([this.alice, this.bob], {from: this.bob}),
-        "Ownable: caller is not the owner"
-      );
-    });
-
-    it("revert multiMint from not minter", async function () {
-      await expectRevert(this.MCRTNFT.mint(1, this.alice, {from: this.bob}), "NFT: Invalid minter");
+      expect((await this.MCRTNFT.baseTokenURI()).toString()).to.eq("baseuri-string");
     });
   });
 
@@ -66,7 +41,7 @@ describe("MCRTNFT Contract", function () {
     it("transfer items successfully", async function () {
       await this.MCRTNFT.safeTransferFrom(this.alice, this.carol, 1, {from: this.alice});
       await this.MCRTNFT.safeTransferFrom(this.bob, this.carol, 2, {from: this.bob});
-      expect((await this.MCRTNFT.balanceOf(this.carol)).toString()).to.eq("3");
+      expect((await this.MCRTNFT.balanceOf(this.carol)).toString()).to.eq("2");
     });
   });
 });
