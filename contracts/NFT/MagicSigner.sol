@@ -12,7 +12,7 @@ contract MagicSigner is EIP712Upgradeable {
         bytes signature;
     }
 
-    function __MagicSigner_init() internal initializer {
+    function __MagicSigner_init() internal onlyInitializing {
         __EIP712_init(SIGNING_DOMAIN, SIGNATURE_VERSION);
     }
 

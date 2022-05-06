@@ -11,7 +11,7 @@ describe("MCRTNFT Contract", function () {
     this.alice = alice;
     this.bob = bob;
     this.carol = carol;
-    this.MCRTNFT = await MCRTNFTArt.new("MCRT NFT", "MCRTNFT", this.Max_Supply);
+    this.MCRTNFT = await MCRTNFTArt.new();
     await this.MCRTNFT.initialize("MCRT NFT", "MCRTNFT", this.Max_Supply, this.owner, this.owner);
 
     await this.MCRTNFT.setBaseURI("baseuri-string");

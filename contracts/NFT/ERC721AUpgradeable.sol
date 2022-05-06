@@ -94,7 +94,7 @@ contract ERC721AUpgradeable is
     // Mapping from owner to operator approvals
     mapping(address => mapping(address => bool)) private _operatorApprovals;
 
-    function __ERC721A_init(string memory name_, string memory symbol_) internal initializer {
+    function __ERC721A_init(string memory name_, string memory symbol_) internal onlyInitializing {
         __Context_init();
         __ERC165_init();
 
