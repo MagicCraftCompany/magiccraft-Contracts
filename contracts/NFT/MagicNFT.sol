@@ -49,6 +49,11 @@ contract MagicNFT is
         _;
     }
 
+    modifier notOverMaxSupply(uint256 _amount) {
+        require(_amount + totalSupply() <= MAX_SUPPLY, "Max Supply Limit Exceeded");
+        _;
+    }
+
     function initialize(
         string memory name_,
         string memory symbol_,
@@ -78,8 +83,7 @@ contract MagicNFT is
         publicMintPriceForEach = 0.75 ether;
     }
 
-    function ownerMint(uint256 _amount) external onlyOwner {
-        require(_amount + totalSupply() <= MAX_SUPPLY, "Max Supply Limit Exceeded");
+    function ownerMint(uint256 _amount) external onlyOwner notOverMaxSupply(_amount) {
         ownerMinted += _amount;
         _mint(_msgSender(), _amount);
     }
@@ -88,6 +92,7 @@ contract MagicNFT is
         external
         payable
         nonReentrant
+        notOverMaxSupply(_amount)
     {
         require(isWhiteListSale, "Whitelist sale is not open yet");
         require(getSigner(_whitelist) == designatedSigner, "Invalid Signature");
@@ -103,13 +108,18 @@ contract MagicNFT is
         _mint(_whitelist.userAddress, _amount);
     }
 
-    function publicMint(uint256 _amount) external payable onlyEOA nonReentrant {
+    function publicMint(uint256 _amount)
+        external
+        payable
+        onlyEOA
+        nonReentrant
+        notOverMaxSupply(_amount)
+    {
         require(isPublicSale, "Public sale is not open yet");
         require(
             _amount + publicMintSpotBought[_msgSender()] <= maxPublicMintForEach,
             "Max Public Mint Spot Bought"
         );
-        require(totalSupply() + _amount <= MAX_SUPPLY, "Public Mint all sold");
         require(msg.value == publicMintPriceForEach * _amount, "Pay Exact Amount");
 
         publicMintSpotBought[_msgSender()] += _amount;
