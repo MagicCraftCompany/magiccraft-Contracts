@@ -35,7 +35,7 @@ contract MagicNFT is
     bool public isWhiteListSale;
     bool public isPublicSale;
 
-    uint96 public constant ROYALTY_PERCENT = 75;
+    uint96 public constant ROYALTY_PERCENT = 750;
 
     mapping(address => uint256) public whiteListSpotBought;
     mapping(address => uint256) public publicMintSpotBought;
@@ -219,6 +219,10 @@ contract MagicNFT is
     function setMaxSupply(uint256 amount) external onlyOwner {
         require(MAX_SUPPLY >= totalSupply(), "Invalid max supply number");
         MAX_SUPPLY = amount;
+    }
+
+    function setMinter(address _account, bool _isMinter) external onlyOwner {
+        minters[_account] = _isMinter;
     }
 
     ///@dev Toggle contract pause
