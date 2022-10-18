@@ -204,6 +204,8 @@ contract MagicNFT is
         whiteListPriceForEach = _price;
     }
 
+    function setMinter(address _account, bool _value) external onlyOwner {}
+
     ///////////////
     /// Set Max ///
     ///////////////

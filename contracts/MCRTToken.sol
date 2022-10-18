@@ -1,267 +1,300 @@
-// SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v4.5.0) (token/ERC20/ERC20.sol)
-
-pragma solidity 0.7.4;
-
-import "./Ownable.sol";
-
 /**
- * @title MCRTToken
+ *Submitted for verification at BscScan.com on 2021-12-10
  */
-contract MCRTToken is Ownable {
-    mapping(address => uint256) private _balances;
-    mapping(address => mapping(address => uint256)) private _allowances;
 
-    string private _name;
-    string private _symbol;
-    uint8 private _decimals;
-    uint256 private _totalSupply;
+// SPDX-License-Identifier: Unlicensed
 
-    event Transfer(address indexed _from, address indexed _to, uint256 _value);
-    event Approval(
-        address indexed _owner,
-        address indexed _spender,
-        uint256 _value
-    );
+pragma solidity >=0.8.0;
 
-    /**
-     * @dev Sets the values for {name} and {symbol}.
-     *
-     * The default value of {decimals} is 18. To select a different value for
-     * {decimals} you should overload it.
-     *
-     * All two of these values are immutable: they can only be set once during
-     * construction.
-     */
-    constructor() {
-        _name = "MCRT";
-        _symbol = "MCRT";
-        _decimals = 18;
-        _totalSupply = 10000000000 * (10**_decimals);
-        _balances[owner] = _totalSupply;
-    }
+interface IERC20 {
+    function totalSupply() external view returns (uint256);
 
-    /**
-     * @dev Returns the name of the token.
-     */
-    function name() public view returns (string memory) {
-        return _name;
-    }
+    function balanceOf(address account) external view returns (uint256);
 
-    /**
-     * @dev Returns the symbol of the token, usually a shorter version of the
-     * name.
-     */
-    function symbol() public view returns (string memory) {
-        return _symbol;
-    }
+    function transfer(address recipient, uint256 amount) external returns (bool);
 
-    /**
-     * @dev Returns the number of decimals used to get its user representation.
-     * For example, if `decimals` equals `2`, a balance of `505` tokens should
-     * be displayed to a user as `5.05` (`505 / 10 ** 2`).
-     *
-     * Tokens usually opt for a value of 18, imitating the relationship between
-     * Ether and Wei. This is the value {ERC20} uses, unless this function is
-     * overridden;
-     *
-     * NOTE: This information is only used for _display_ purposes: it in
-     * no way affects any of the arithmetic of the contract, including
-     * {IERC20-balanceOf} and {IERC20-transfer}.
-     */
-    function decimals() public view returns (uint8) {
-        return _decimals;
-    }
+    function allowance(address owner, address spender) external view returns (uint256);
 
-    /**
-     * @dev See {IERC20-totalSupply}.
-     */
-    function totalSupply() public view returns (uint256) {
-        return _totalSupply;
-    }
+    function approve(address spender, uint256 amount) external returns (bool);
 
-    /**
-     * @dev See {IERC20-balanceOf}.
-     */
-    function balanceOf(address account) public view returns (uint256) {
-        return _balances[account];
-    }
-
-    /**
-     * @dev See {IERC20-transfer}.
-     *
-     * Requirements:
-     *
-     * - `to` cannot be the zero address.
-     * - the caller must have a balance of at least `amount`.
-     */
-    function transfer(address to, uint256 amount) public returns (bool) {
-        address owner = _msgSender();
-        _transfer(owner, to, amount);
-        return true;
-    }
-
-    /**
-     * @dev See {IERC20-allowance}.
-     */
-    function allowance(address owner, address spender) public view returns (uint256) {
-        return _allowances[owner][spender];
-    }
-
-    /**
-     * @dev See {IERC20-approve}.
-     *
-     * NOTE: If `amount` is the maximum `uint256`, the allowance is not updated on
-     * `transferFrom`. This is semantically equivalent to an infinite approval.
-     *
-     * Requirements:
-     *
-     * - `spender` cannot be the zero address.
-     */
-    function approve(address spender, uint256 amount) public returns (bool) {
-        address owner = _msgSender();
-        _approve(owner, spender, amount);
-        return true;
-    }
-
-    /**
-     * @dev See {IERC20-transferFrom}.
-     *
-     * Emits an {Approval} event indicating the updated allowance. This is not
-     * required by the EIP. See the note at the beginning of {ERC20}.
-     *
-     * NOTE: Does not update the allowance if the current allowance
-     * is the maximum `uint256`.
-     *
-     * Requirements:
-     *
-     * - `from` and `to` cannot be the zero address.
-     * - `from` must have a balance of at least `amount`.
-     * - the caller must have allowance for ``from``'s tokens of at least
-     * `amount`.
-     */
     function transferFrom(
-        address from,
-        address to,
+        address sender,
+        address recipient,
         uint256 amount
-    ) public returns (bool) {
-        address spender = _msgSender();
-        _spendAllowance(from, spender, amount);
-        _transfer(from, to, amount);
+    ) external returns (bool);
+
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+    /*function permit(address owner, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external;
+    function nonces(address owner) external view returns (uint);
+    function DOMAIN_SEPARATOR() external view returns (bytes32);*/
+}
+
+library SafeMath {
+    function mul(uint256 a, uint256 b) internal pure returns (uint256 c) {
+        if (a == 0) {
+            return 0;
+        }
+        c = a * b;
+        assert(c / a == b);
+        return c;
+    }
+
+    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+        // assert(b > 0); // Solidity automatically throws when dividing by 0
+        // uint256 c = a / b;
+        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
+        return a / b;
+    }
+
+    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+        assert(b <= a);
+        return a - b;
+    }
+
+    function add(uint256 a, uint256 b) internal pure returns (uint256 c) {
+        c = a + b;
+        assert(c >= a);
+        return c;
+    }
+}
+
+contract MCRTToken is IERC20 {
+    struct Stake {
+        address account;
+        uint256 amount;
+    }
+
+    uint256[3] public privateSaleTotalTokens; //total private sale tokens for each
+    uint256[3] public privateSaleEnd; //dstribution time and distribution flag != 0
+    Stake[][3] public privateSaleList; //editable to determine distribution
+    mapping(address => uint256)[3] public privateSaleBalance; //amount of private sale current lockup balance after distribution
+    uint256[3] public privateSaleToDistribute; //tokens undistrbuted
+    uint8 public completedSales;
+
+    uint256 public totalTeamTokens = 2800000000; //max team tokens
+    Stake[] public teamList; //editable to determine distribution
+    uint256 public teamVestingStart; //furthest private sale end date
+    mapping(address => uint256) public teamTokenBalance; //amount from distribution
+    uint256 public teamToDistribute; //tokens undistrbuted
+    bool public canWithdraw; //withdraw extra tokens not sold or sent to team
+
+    using SafeMath for uint256;
+
+    string public name;
+    string public symbol;
+    uint8 public decimals;
+    uint256 public immutable override totalSupply;
+    mapping(address => uint256) public override balanceOf;
+    mapping(address => mapping(address => uint256)) public override allowance;
+    address private owner;
+
+    modifier unFinalized(uint8 saleIndex) {
+        require(privateSaleEnd[saleIndex] == 0, "already distributed");
+        _;
+    }
+    modifier finalized(uint8 saleIndex) {
+        require(privateSaleEnd[saleIndex] != 0, "not distributed");
+        _;
+    }
+    modifier onlyOwner() {
+        require(msg.sender == owner, "not owner");
+        _;
+    }
+
+    constructor(
+        string memory _name,
+        string memory _symbol,
+        uint8 _decimals
+    ) {
+        owner = msg.sender;
+        uint256 _totalSupply = 10000000000 * 10**_decimals;
+        (name, symbol, decimals, totalSupply) = (_name, _symbol, _decimals, _totalSupply);
+        balanceOf[address(0)] = 3800000000 * 10**_decimals;
+        balanceOf[msg.sender] = 6200000000 * 10**_decimals;
+        privateSaleTotalTokens[0] = 250000000 * 10**_decimals;
+        privateSaleTotalTokens[1] = 350000000 * 10**_decimals;
+        privateSaleTotalTokens[2] = 400000000 * 10**_decimals;
+    }
+
+    function _transfer(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) private {
+        require(spendableBalance(sender) >= amount, "insuffficient unlocked balance");
+        balanceOf[sender] = balanceOf[sender].sub(amount);
+        balanceOf[recipient] = balanceOf[recipient].add(amount);
+        emit Transfer(sender, recipient, amount);
+    }
+
+    function transfer(address recipient, uint256 amount) external override returns (bool) {
+        _transfer(msg.sender, recipient, amount);
         return true;
     }
 
-    /**
-     * @dev Moves `amount` of tokens from `sender` to `recipient`.
-     *
-     * This internal function is equivalent to {transfer}, and can be used to
-     * e.g. implement automatic token fees, slashing mechanisms, etc.
-     *
-     * Emits a {Transfer} event.
-     *
-     * Requirements:
-     *
-     * - `from` cannot be the zero address.
-     * - `to` cannot be the zero address.
-     * - `from` must have a balance of at least `amount`.
-     */
-    function _transfer(
-        address from,
-        address to,
+    function transferFrom(
+        address sender,
+        address recipient,
         uint256 amount
-    ) internal {
-        require(from != address(0), "ERC20: transfer from the zero address");
-        require(to != address(0), "ERC20: transfer to the zero address");
-
-        uint256 fromBalance = _balances[from];
-        require(fromBalance >= amount, "ERC20: transfer amount exceeds balance");
-        _balances[from] = fromBalance - amount;
-        _balances[to] += amount;
-
-        emit Transfer(from, to, amount);
+    ) external override returns (bool) {
+        require(allowance[sender][msg.sender] >= amount, "Not Approved");
+        allowance[sender][msg.sender] = allowance[sender][msg.sender].sub(amount);
+        _transfer(sender, recipient, amount);
+        return true;
     }
 
-    /** @dev Creates `amount` tokens and assigns them to `account`, increasing
-     * the total supply.
-     *
-     * Emits a {Transfer} event with `from` set to the zero address.
-     *
-     * Requirements:
-     *
-     * - `account` cannot be the zero address.
-     */
-    function mint(address account, uint256 amount) external onlyOwner {
-        require(account != address(0), "ERC20: mint to the zero address");
-
-        _totalSupply += amount;
-        _balances[account] += amount;
-        emit Transfer(address(0), account, amount);
+    function approve(address spender, uint256 amount) external override returns (bool) {
+        allowance[msg.sender][spender] = amount;
+        emit Approval(msg.sender, spender, amount);
+        return true;
     }
 
-    /**
-     * @dev Destroys `amount` tokens from `account`, reducing the
-     * total supply.
-     *
-     * Emits a {Transfer} event with `to` set to the zero address.
-     *
-     * Requirements:
-     *
-     * - `account` cannot be the zero address.
-     * - `account` must have at least `amount` tokens.
-     */
-    function burn(address account, uint256 amount) external onlyOwner {
-        require(account != address(0), "ERC20: burn from the zero address");
-
-        uint256 accountBalance = _balances[account];
-        require(accountBalance >= amount, "ERC20: burn amount exceeds balance");
-        _balances[account] = accountBalance - amount;
-        _totalSupply -= amount;
-
-        emit Transfer(account, address(0), amount);
+    function clearPrivateSale(uint8 saleIndex) external unFinalized(saleIndex) onlyOwner {
+        delete privateSaleList[saleIndex];
+        privateSaleToDistribute[saleIndex] = 0;
     }
 
-    /**
-     * @dev Sets `amount` as the allowance of `spender` over the `owner` s tokens.
-     *
-     * This internal function is equivalent to `approve`, and can be used to
-     * e.g. set automatic allowances for certain subsystems, etc.
-     *
-     * Emits an {Approval} event.
-     *
-     * Requirements:
-     *
-     * - `owner` cannot be the zero address.
-     * - `spender` cannot be the zero address.
-     */
-    function _approve(
-        address owner,
-        address spender,
+    function addToPrivateSale(
+        uint8 saleIndex,
+        address buyer,
         uint256 amount
-    ) internal {
-        require(owner != address(0), "ERC20: approve from the zero address");
-        require(spender != address(0), "ERC20: approve to the zero address");
-
-        _allowances[owner][spender] = amount;
-        emit Approval(owner, spender, amount);
+    ) external unFinalized(saleIndex) onlyOwner {
+        amount = amount * 10**decimals;
+        require(privateSaleToDistribute[saleIndex] + amount <= privateSaleTotalTokens[saleIndex]);
+        privateSaleList[saleIndex].push(Stake(buyer, amount));
+        privateSaleToDistribute[saleIndex] = privateSaleToDistribute[saleIndex].add(amount);
     }
 
-    /**
-     * @dev Updates `owner` s allowance for `spender` based on spent `amount`.
-     *
-     * Does not update the allowance amount in case of infinite allowance.
-     * Revert if not enough allowance is available.
-     *
-     * Might emit an {Approval} event.
-     */
-    function _spendAllowance(
-        address owner,
-        address spender,
-        uint256 amount
-    ) internal {
-        uint256 currentAllowance = allowance(owner, spender);
-        if (currentAllowance != type(uint256).max) {
-            require(currentAllowance >= amount, "ERC20: insufficient allowance");
-            _approve(owner, spender, currentAllowance - amount);
+    function addMultipleToPrivateSale(
+        uint8 saleIndex,
+        address[] memory buyers,
+        uint256[] memory amounts
+    ) external unFinalized(saleIndex) onlyOwner {
+        for (uint256 i = 0; i < buyers.length; i++) {
+            amounts[i] = amounts[i] * 10**decimals;
+            require(
+                privateSaleToDistribute[saleIndex] + amounts[i] <= privateSaleTotalTokens[saleIndex]
+            );
+            privateSaleList[saleIndex].push(Stake(buyers[i], amounts[i]));
+            privateSaleToDistribute[saleIndex] = privateSaleToDistribute[saleIndex].add(amounts[i]);
         }
     }
+
+    function clearTeam() external unFinalized(2) onlyOwner {
+        delete teamList;
+        teamToDistribute = 0;
+    }
+
+    function addToTeam(address member, uint256 amount) external unFinalized(2) onlyOwner {
+        amount = amount * 10**decimals;
+        require(teamToDistribute + amount <= totalTeamTokens);
+        teamList.push(Stake(member, amount));
+        teamToDistribute = teamToDistribute.add(amount);
+    }
+
+    function addMultipleToTeam(address[] memory members, uint256[] memory amounts)
+        external
+        unFinalized(2)
+        onlyOwner
+    {
+        for (uint256 i = 0; i < members.length; i++) {
+            amounts[i] = amounts[i] * 10**decimals;
+            require(teamToDistribute + amounts[i] <= totalTeamTokens);
+            teamList.push(Stake(members[i], amounts[i]));
+            teamToDistribute = teamToDistribute.add(amounts[i]);
+        }
+    }
+
+    function distributePrivateSale(uint8 saleIndex) external unFinalized(saleIndex) onlyOwner {
+        require(block.timestamp != 0); //unlikely edge case
+        for (uint256 i = 0; i < privateSaleList[saleIndex].length; i++) {
+            _transfer(
+                address(0),
+                privateSaleList[saleIndex][i].account,
+                privateSaleList[saleIndex][i].amount
+            );
+            privateSaleBalance[saleIndex][
+                privateSaleList[saleIndex][i].account
+            ] = privateSaleBalance[saleIndex][privateSaleList[saleIndex][i].account].add(
+                privateSaleList[saleIndex][i].amount
+            );
+        }
+        completedSales++;
+        privateSaleEnd[saleIndex] = block.timestamp;
+        if (completedSales == 3) {
+            for (uint256 i = 0; i < teamList.length; i++) {
+                _transfer(address(0), teamList[i].account, teamList[i].amount);
+                teamTokenBalance[teamList[i].account] = teamTokenBalance[teamList[i].account].add(
+                    teamList[i].amount
+                );
+            }
+            teamVestingStart = block.timestamp;
+            canWithdraw = true;
+        }
+    }
+
+    function spendableBalance(address account) public view returns (uint256) {
+        uint256 lockedTokens;
+        for (uint8 i = 0; i < privateSaleEnd.length; i++) {
+            lockedTokens = lockedTokens.add(lockedBalanceFromSale(account, i));
+        }
+        if (
+            teamVestingStart > 0 &&
+            teamTokenBalance[account] > 0 &&
+            block.timestamp < teamVestingStart + 31557600
+        ) {
+            if (block.timestamp > teamVestingStart) {
+                lockedTokens = lockedTokens.add(
+                    (teamVestingStart + 31557600 - block.timestamp)
+                        .mul(teamTokenBalance[account])
+                        .div(31557600)
+                );
+            } else {
+                lockedTokens = lockedTokens.add(teamTokenBalance[account]);
+            }
+        }
+        return balanceOf[account].sub(lockedTokens);
+    }
+
+    function lockedBalanceFromSale(address account, uint8 saleIndex) public view returns (uint256) {
+        //private sale balance and not past maturity
+        if (
+            privateSaleBalance[saleIndex][account] > 0 &&
+            block.timestamp < privateSaleEnd[saleIndex] + 39447000
+        ) {
+            //before 3 month lockup ends entire balance is locked
+            if (block.timestamp < privateSaleEnd[saleIndex] + 7889400) {
+                return privateSaleBalance[saleIndex][account];
+            }
+            //immature portion = (maturity - currentTime / maturity) * balance
+            else {
+                return
+                    (privateSaleEnd[saleIndex] + 39447000 - block.timestamp)
+                        .mul(privateSaleBalance[saleIndex][account])
+                        .div(31557600);
+            }
+        }
+        return 0;
+    }
+
+    function withdrawLeftoverPrivateSale(uint8 saleIndex) external finalized(saleIndex) onlyOwner {
+        require(teamVestingStart != 0 && canWithdraw == true);
+        //all "ToDistribute" balances are already distributed
+        _transfer(
+            address(0),
+            owner,
+            totalTeamTokens -
+                teamToDistribute +
+                privateSaleTotalTokens[0] -
+                privateSaleToDistribute[0] +
+                privateSaleTotalTokens[1] -
+                privateSaleToDistribute[1] +
+                privateSaleTotalTokens[2] -
+                privateSaleToDistribute[2]
+        );
+        canWithdraw = false;
+    }
+
+    //function privateSaleSend for token lockup multisend
 }
