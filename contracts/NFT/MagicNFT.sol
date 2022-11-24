@@ -54,7 +54,8 @@ contract MagicNFT is
     uint256 public discountPercent;
     uint256 public discountStartTime;
     uint256 public discountDuration;
-    uint256 public constant DISCOUNT_DIVIDER = 10000;
+    uint256 public DISCOUNT_DIVIDER;
+    uint256 public discountMinted;
 
     modifier onlyMinter() {
         require(minters[msg.sender], "Invalid minter");
@@ -137,21 +138,27 @@ contract MagicNFT is
         notOverMaxSupply(_amount)
     {
         require(isPublicSale, "Public sale is not open yet");
-        require(
-            _amount + publicMintSpotBought[_msgSender()] <= maxPublicMintForEach,
-            "Max Public Mint Spot Bought"
-        );
+
         uint256 mintPrice = publicMintPriceForEach;
         if (
             block.timestamp >= discountStartTime &&
             block.timestamp <= discountStartTime + discountDuration
         ) {
             mintPrice = (mintPrice * discountPercent) / DISCOUNT_DIVIDER;
-        }
-        require(msg.value == mintPrice * _amount, "Pay Exact Amount");
+            require(msg.value == mintPrice * _amount, "Pay Exact Amount");
 
-        publicMintSpotBought[_msgSender()] += _amount;
-        publicMinted += _amount;
+            require(_amount + discountMinted <= 1e3, "Max Discount Number Reached");
+            discountMinted += _amount;
+        } else {
+            require(
+                _amount + publicMintSpotBought[_msgSender()] <= maxPublicMintForEach,
+                "Max Public Mint Spot Bought"
+            );
+            require(msg.value == mintPrice * _amount, "Pay Exact Amount");
+
+            publicMintSpotBought[_msgSender()] += _amount;
+            publicMinted += _amount;
+        }
 
         for (uint256 i = _currentIndex; i <= _currentIndex + _amount; i++) {
             _setTokenRoyalty(i, msg.sender, ROYALTY_PERCENT);
@@ -231,6 +238,10 @@ contract MagicNFT is
 
     function setDiscountDuration(uint256 _durationInDay) external onlyOwner {
         discountDuration = _durationInDay * 3600 * 24;
+    }
+
+    function setDiscountMaxDivider() external onlyOwner {
+        DISCOUNT_DIVIDER = 10000;
     }
 
     ///////////////

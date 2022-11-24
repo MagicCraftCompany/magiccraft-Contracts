@@ -31,18 +31,19 @@ describe("Starting the test suite", () => {
 
     await nft.setPublicSale(true);
     await nft.setMaxPublicMintForEach(10);
-    await nft.setDiscountPercent(5000);
+    await nft.setDiscountMaxDivider();
+    await nft.setDiscountPercent(9000);
     await nft.setDiscountStartTime(startTime + 3600);
     await nft.setDiscountDuration(1);
 
     await advanceTime(7200);
-    await nft.connect(bob).publicMint(1, {value: ethers.utils.parseEther("0.375")});
+    await nft.connect(bob).publicMint(1, {value: ethers.utils.parseEther("0.675")});
 
     const owner = await nft.ownerOf(2);
     expect(owner).to.equal(bob.address);
 
     await advanceTime(3600 * 23);
 
-    await expectRevert(nft.connect(bob).publicMint(1, {value: ethers.utils.parseEther("0.375")}), "Pay Exact Amount");
+    await expectRevert(nft.connect(bob).publicMint(1, {value: ethers.utils.parseEther("0.675")}), "Pay Exact Amount");
   });
 });
