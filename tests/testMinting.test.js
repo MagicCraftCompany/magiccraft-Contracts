@@ -1,5 +1,7 @@
 const {expect} = require("chai");
 const {ethers} = require("hardhat");
+const {expectRevert} = require("@openzeppelin/test-helpers");
+
 const {advanceTime, currentTimestamp} = require("./utils/utils");
 const {WhiteList} = require("./utils/sinature");
 
@@ -22,5 +24,25 @@ describe("Starting the test suite", () => {
 
     const owner = await nft.ownerOf(1);
     expect(owner).to.equal(bob.address);
+  });
+
+  it("Test: Discount", async function () {
+    const startTime = Math.floor(new Date().getTime() / 1000);
+
+    await nft.setPublicSale(true);
+    await nft.setMaxPublicMintForEach(10);
+    await nft.setDiscountPercent(5000);
+    await nft.setDiscountStartTime(startTime + 3600);
+    await nft.setDiscountDuration(1);
+
+    await advanceTime(7200);
+    await nft.connect(bob).publicMint(1, {value: ethers.utils.parseEther("0.375")});
+
+    const owner = await nft.ownerOf(2);
+    expect(owner).to.equal(bob.address);
+
+    await advanceTime(3600 * 23);
+
+    await expectRevert(nft.connect(bob).publicMint(1, {value: ethers.utils.parseEther("0.375")}), "Pay Exact Amount");
   });
 });

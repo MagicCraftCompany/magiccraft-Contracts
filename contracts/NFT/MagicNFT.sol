@@ -35,7 +35,7 @@ contract MagicNFT is
     bool public isWhiteListSale;
     bool public isPublicSale;
 
-    uint96 public constant ROYALTY_PERCENT = 75;
+    uint96 public constant ROYALTY_PERCENT = 750;
 
     mapping(address => uint256) public whiteListSpotBought;
     mapping(address => uint256) public publicMintSpotBought;
@@ -50,6 +50,11 @@ contract MagicNFT is
 
     RoyaltyInfo private _defaultRoyaltyInfo;
     mapping(uint256 => RoyaltyInfo) private _tokenRoyaltyInfo;
+
+    uint256 public discountPercent;
+    uint256 public discountStartTime;
+    uint256 public discountDuration;
+    uint256 public constant DISCOUNT_DIVIDER = 10000;
 
     modifier onlyMinter() {
         require(minters[msg.sender], "Invalid minter");
@@ -136,7 +141,14 @@ contract MagicNFT is
             _amount + publicMintSpotBought[_msgSender()] <= maxPublicMintForEach,
             "Max Public Mint Spot Bought"
         );
-        require(msg.value == publicMintPriceForEach * _amount, "Pay Exact Amount");
+        uint256 mintPrice = publicMintPriceForEach;
+        if (
+            block.timestamp >= discountStartTime &&
+            block.timestamp <= discountStartTime + discountDuration
+        ) {
+            mintPrice = (mintPrice * discountPercent) / DISCOUNT_DIVIDER;
+        }
+        require(msg.value == mintPrice * _amount, "Pay Exact Amount");
 
         publicMintSpotBought[_msgSender()] += _amount;
         publicMinted += _amount;
@@ -173,7 +185,7 @@ contract MagicNFT is
         treasure.transfer(address(this).balance);
     }
 
-    function setBaseURI(string memory baseURI_) public onlyOwner {
+    function setBaseURI(string memory baseURI_) public onlyMinter {
         require(bytes(baseURI_).length > 0, "Invalid base URI");
         baseTokenURI = baseURI_;
     }
@@ -204,7 +216,22 @@ contract MagicNFT is
         whiteListPriceForEach = _price;
     }
 
-    function setMinter(address _account, bool _value) external onlyOwner {}
+    ////////////////////
+    /// Set Discount ///
+    ////////////////////
+    function setDiscountPercent(uint256 _percent) external onlyOwner {
+        require(_percent < DISCOUNT_DIVIDER, "Invalid percent");
+        discountPercent = _percent;
+    }
+
+    function setDiscountStartTime(uint256 _timestamp) external onlyOwner {
+        require(_timestamp >= block.timestamp, "Invalid start time");
+        discountStartTime = _timestamp;
+    }
+
+    function setDiscountDuration(uint256 _durationInDay) external onlyOwner {
+        discountDuration = _durationInDay * 3600 * 24;
+    }
 
     ///////////////
     /// Set Max ///
@@ -221,6 +248,10 @@ contract MagicNFT is
     function setMaxSupply(uint256 amount) external onlyOwner {
         require(MAX_SUPPLY >= totalSupply(), "Invalid max supply number");
         MAX_SUPPLY = amount;
+    }
+
+    function setMinter(address _account, bool _isMinter) external onlyOwner {
+        minters[_account] = _isMinter;
     }
 
     ///@dev Toggle contract pause
