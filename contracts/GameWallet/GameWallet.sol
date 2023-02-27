@@ -17,12 +17,19 @@ contract GameWallet is OwnableUpgradeable {
     // Mapping for withdraw lock
     mapping(address => bool) public locked;
 
-    uint256[50] private __gap;
+    // treasury address
+    address public treasury;
+
+    // prize fee
+    uint256 public prizeFee;
+
+    uint256[48] private __gap;
 
     event Deposited(address indexed account, uint256 amount);
     event Withdrawn(address indexed account, uint256 amount);
     event Deducted(address indexed account, uint256 amount);
     event WonPrize(address indexed account, uint256 amount);
+    event PrizeFeeSent(address indexed account, uint256 amount);
 
     /** Initializes the GameWallet
     @param tokenAddress_ the token address for prize 
@@ -58,17 +65,18 @@ contract GameWallet is OwnableUpgradeable {
     function winPrize(
         address[] memory _accounts,
         uint256[] memory _entryFees,
-        address _winner
+        address[] memory _winners
     ) external onlyOwner {
-        require(_winner != address(0), "Invalid winner address");
+        require(_winners.length != 0, "Invalid winners array");
         require(
             _accounts.length == _entryFees.length && _accounts.length != 0,
             "Invalid array length"
         );
 
         uint256 sum;
+        uint256 i;
 
-        for (uint256 i; i < _accounts.length; i++) {
+        for (i; i < _accounts.length; i++) {
             require(pBalance[_accounts[i]] >= _entryFees[i], "Not enough balance deposited");
 
             pBalance[_accounts[i]] -= _entryFees[i];
@@ -76,8 +84,25 @@ contract GameWallet is OwnableUpgradeable {
             emit Deducted(_accounts[i], _entryFees[i]);
         }
 
-        prizeToken.safeTransfer(_winner, sum);
-        emit WonPrize(_winner, sum);
+        // deduct prize fee
+        if ((sum * prizeFee) / 1e4 != 0 && treasury != address(0)) {
+            prizeToken.safeTransfer(treasury, (sum * prizeFee) / 1e4);
+            emit PrizeFeeSent(treasury, (sum * prizeFee) / 1e4);
+            sum -= (sum * prizeFee) / 1e4;
+        }
+
+        for (i = 0; i < _winners.length; i++) {
+            if (i == _winners.length - 1) {
+                prizeToken.safeTransfer(
+                    _winners[i],
+                    sum - (sum * (_winners.length - 1)) / _winners.length
+                );
+                emit WonPrize(_winners[i], sum - (sum * (_winners.length - 1)) / _winners.length);
+            } else {
+                prizeToken.safeTransfer(_winners[i], sum / _winners.length);
+                emit WonPrize(_winners[i], sum / _winners.length);
+            }
+        }
     }
 
     function lockAccounts(address[] memory _accounts, bool[] memory _locked) external onlyOwner {
@@ -87,5 +112,15 @@ contract GameWallet is OwnableUpgradeable {
         );
 
         for (uint256 i; i < _locked.length; i++) locked[_accounts[i]] = _locked[i];
+    }
+
+    function setTreasury(address _treasury) external onlyOwner {
+        require(_treasury != address(0), "Invalid treasury address");
+        treasury = _treasury;
+    }
+
+    function setPrizeFee(uint256 _prizeFee) external onlyOwner {
+        require(prizeFee <= 2e3, "Invalid prize fee value");
+        prizeFee = _prizeFee;
     }
 }

@@ -6,9 +6,9 @@ const {advanceTime, currentTimestamp} = require("./utils/utils");
 const {WhiteList} = require("./utils/sinature");
 
 describe("Starting the test suite", () => {
-  let owner, alice, bob, gameWallet, mcrt;
+  let owner, alice, bob, gameWallet, mcrt, treasury;
   before(async () => {
-    [owner, alice, bob] = await ethers.getSigners();
+    [owner, alice, bob, treasury] = await ethers.getSigners();
 
     const MCRTToken = await ethers.getContractFactory("MCRTToken");
     mcrt = await MCRTToken.deploy("MCRT", "MCRT", 9);
@@ -19,6 +19,9 @@ describe("Starting the test suite", () => {
 
     await mcrt.connect(owner).transfer(alice.address, "1000000000000"); // 1000 MCRT
     await mcrt.connect(owner).transfer(bob.address, "1000000000000"); // 1000 MCRT
+
+    await gameWallet.setTreasury(treasury.address);
+    await gameWallet.setPrizeFee(1000);
 
     console.log("MCRT: ", mcrt.address);
     console.log("GameWallet: ", gameWallet.address);
@@ -38,9 +41,10 @@ describe("Starting the test suite", () => {
   it("Test: WinPrize", async function () {
     await gameWallet
       .connect(owner)
-      .winPrize([alice.address, bob.address], ["10000000000", "10000000000"], alice.address);
+      .winPrize([alice.address, bob.address], ["10000000000", "10000000000"], [alice.address]);
 
-    expect(await mcrt.balanceOf(alice.address)).to.eq("20000000000") &&
+    expect(await mcrt.balanceOf(alice.address)).to.eq("18000000000") &&
+      expect(await mcrt.balanceOf(treasury.address)).to.eq("2000000000") &&
       expect(await gameWallet.pBalance(alice.address)).to.eq("990000000000") &&
       expect(await gameWallet.pBalance(bob.address)).to.eq("990000000000");
   });
