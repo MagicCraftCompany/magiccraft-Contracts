@@ -17,13 +17,13 @@ contract GameWallet is OwnableUpgradeable {
     // Mapping for withdraw lock
     mapping(address => bool) public locked;
 
-    // treasury address
-    address public treasury;
+    uint256[50] private __gap;
 
     // prize fee
     uint256 public prizeFee;
 
-    uint256[48] private __gap;
+    // treasury address
+    address public treasury;
 
     event Deposited(address indexed account, uint256 amount);
     event Withdrawn(address indexed account, uint256 amount);
@@ -86,20 +86,17 @@ contract GameWallet is OwnableUpgradeable {
 
         // deduct prize fee
         if ((sum * prizeFee) / 1e4 != 0 && treasury != address(0)) {
-            prizeToken.safeTransfer(treasury, (sum * prizeFee) / 1e4);
+            pBalance[treasury] += (sum * prizeFee) / 1e4;
             emit PrizeFeeSent(treasury, (sum * prizeFee) / 1e4);
             sum -= (sum * prizeFee) / 1e4;
         }
 
         for (i = 0; i < _winners.length; i++) {
             if (i == _winners.length - 1) {
-                prizeToken.safeTransfer(
-                    _winners[i],
-                    sum - (sum * (_winners.length - 1)) / _winners.length
-                );
+                pBalance[_winners[i]] += sum - (sum * (_winners.length - 1)) / _winners.length;
                 emit WonPrize(_winners[i], sum - (sum * (_winners.length - 1)) / _winners.length);
             } else {
-                prizeToken.safeTransfer(_winners[i], sum / _winners.length);
+                pBalance[_winners[i]] = sum / _winners.length;
                 emit WonPrize(_winners[i], sum / _winners.length);
             }
         }

@@ -43,9 +43,8 @@ describe("Starting the test suite", () => {
       .connect(owner)
       .winPrize([alice.address, bob.address], ["10000000000", "10000000000"], [alice.address]);
 
-    expect(await mcrt.balanceOf(alice.address)).to.eq("18000000000") &&
-      expect(await mcrt.balanceOf(treasury.address)).to.eq("2000000000") &&
-      expect(await gameWallet.pBalance(alice.address)).to.eq("990000000000") &&
+    expect(await gameWallet.pBalance(treasury.address)).to.eq("2000000000") &&
+      expect(await gameWallet.pBalance(alice.address)).to.eq("1008000000000") &&
       expect(await gameWallet.pBalance(bob.address)).to.eq("990000000000");
   });
 
@@ -62,6 +61,6 @@ describe("Starting the test suite", () => {
   it("Test: Withdraw", async function () {
     await gameWallet.connect(alice).withdraw("90000000000");
 
-    expect(await gameWallet.pBalance(alice.address)).to.eq("900000000000");
+    expect(await gameWallet.pBalance(alice.address)).to.eq("918000000000");
   });
 });
