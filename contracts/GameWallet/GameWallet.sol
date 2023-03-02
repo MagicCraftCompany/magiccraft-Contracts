@@ -96,7 +96,7 @@ contract GameWallet is OwnableUpgradeable {
                 pBalance[_winners[i]] += sum - (sum * (_winners.length - 1)) / _winners.length;
                 emit WonPrize(_winners[i], sum - (sum * (_winners.length - 1)) / _winners.length);
             } else {
-                pBalance[_winners[i]] = sum / _winners.length;
+                pBalance[_winners[i]] += sum / _winners.length;
                 emit WonPrize(_winners[i], sum / _winners.length);
             }
         }
