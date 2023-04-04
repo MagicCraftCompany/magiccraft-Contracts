@@ -33,8 +33,8 @@ contract GameWallet is OwnableUpgradeable {
     // prize fond wallet address
     address public prizeFondWallet;
 
-    // Lock duration in seconds 10 minutes default (60s * 10m)
-    uint256 public lockDuration = 600;
+    // Lock duration in seconds
+    uint256 public lockDuration;
 
     // Participant struct
     struct Participant {
