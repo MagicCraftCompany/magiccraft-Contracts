@@ -18,8 +18,8 @@ contract GameWallet is OwnableUpgradeable {
     // Mapping for users balance
     mapping(address => uint256) public pBalance;
 
-    // Mapping for withdraw lock
-    mapping(address => uint256) public lockUntil;
+    // @deprecated
+    mapping(address => bool) public locked;
 
     uint256[50] private __gap;
 
@@ -35,6 +35,9 @@ contract GameWallet is OwnableUpgradeable {
 
     // Lock duration in seconds
     uint256 public lockDuration;
+
+    // Mapping for withdraw lock
+    mapping(address => uint256) public lockUntil;
 
     // Participant struct
     struct Participant {
