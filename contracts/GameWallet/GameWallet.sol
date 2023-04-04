@@ -30,14 +30,17 @@ contract GameWallet is OwnableUpgradeable {
     // treasury address
     address public treasury;
 
+    // prize fond wallet address
+    address public prizeFondWallet;
+
     // Lock duration in seconds 10 minutes default (60s * 10m)
     uint256 public lockDuration = 600;
 
     // Participant struct
     struct Participant {
         address account;
-        uint256 entryFee;
-        uint256 winningPerMille; // Changed from percentage to per mille
+        uint256 winningPerMille;
+        bool isWinner;
     }
 
     event Deposited(address indexed account, uint256 amount);
@@ -82,68 +85,90 @@ contract GameWallet is OwnableUpgradeable {
     ///////////////////////
 
     /**
+    @dev Allows the owner to deposit balance to a specified wallet from prizeFondWallet's balance.
+    @param _recipient The address of the recipient wallet.
+    @param _amount The amount of tokens to be transferred.
+    */
+    function ownerDeposit(address _recipient, uint256 _amount) external onlyOwner {
+        require(_recipient != address(0), "Invalid recipient address");
+        require(pBalance[prizeFondWallet] >= _amount, "Not enough balance in prize fond wallet");
+
+        pBalance[prizeFondWallet] -= _amount;
+        pBalance[_recipient] += _amount;
+
+        emit Deposited(_recipient, _amount);
+    }
+
+    /**
     @dev Distributes prizes to winners based on their winning per mille.
-    @param _participants Array of participants with their entry fees.
-    @param _winners Array of winners with their winning per mille.
-     */
+    @param _participants Array of participants.
+    @param _prizePoolAmount Prize pool amount.
+    @param _distributeFromPrizeFondWallet If true, distribute prize from the prizeFondWallet; otherwise, distribute from entry fees.
+    */
     function winPrize(
         Participant[] memory _participants,
-        Participant[] memory _winners
+        uint256 _prizePoolAmount,
+        bool _distributeFromPrizeFondWallet
     ) external onlyOwner {
-        require(_winners.length != 0, "Invalid winners array");
         require(_participants.length != 0, "Invalid participants array");
 
         uint256 sum;
         uint256 i;
 
-        // Process participants and collect entry fees
-        for (i; i < _participants.length; i++) {
-            address participantAccount = _participants[i].account;
-            uint256 participantEntryFee = _participants[i].entryFee;
+        if (!_distributeFromPrizeFondWallet) {
+            uint256 participantEntryFee = _prizePoolAmount / _participants.length;
 
-            require(
-                pBalance[participantAccount] >= participantEntryFee,
-                "Not enough balance deposited"
-            );
+            // Process participants and collect entry fees
+            for (i; i < _participants.length; i++) {
+                address participantAccount = _participants[i].account;
+                bool isWinner = _participants[i].isWinner;
 
-            // Check if the participant is a winner. If not, deduct entry fee.
-            bool isWinner = false;
-            for (uint256 j = 0; j < _winners.length; j++) {
-                if (_winners[j].account == participantAccount) {
-                    isWinner = true;
-                    break;
+                if (!isWinner) {
+                    require(
+                        pBalance[participantAccount] >= participantEntryFee,
+                        "Not enough balance deposited"
+                    );
+
+                    pBalance[participantAccount] -= participantEntryFee;
+                    sum += participantEntryFee;
+                    emit Deducted(participantAccount, participantEntryFee);
                 }
             }
-
-            if (!isWinner) {
-                pBalance[participantAccount] -= participantEntryFee;
-                sum += participantEntryFee;
-                emit Deducted(participantAccount, participantEntryFee);
-            }
+        } else {
+            require(
+                pBalance[prizeFondWallet] >= _prizePoolAmount,
+                "Not enough balance in prize fond wallet"
+            );
+            sum = _prizePoolAmount;
+            pBalance[prizeFondWallet] -= _prizePoolAmount;
         }
 
-        // deduct prize fee
+        // Check if total winning per mille is 1000
+        uint256 totalWinningPerMille = 0;
+        for (i = 0; i < _participants.length; i++) {
+            if (_participants[i].isWinner) {
+                totalWinningPerMille += _participants[i].winningPerMille;
+            }
+        }
+        require(totalWinningPerMille == 1000, "Total winning per mille must be 1000");
+
+        // sent royalty to tresury
         if ((sum * prizeFee) / 1e4 != 0 && treasury != address(0)) {
             pBalance[treasury] += (sum * prizeFee) / 1e4;
             emit PrizeFeeSent(treasury, (sum * prizeFee) / 1e4);
             sum -= (sum * prizeFee) / 1e4;
         }
 
-        // Check if total winning per mille is 1000
-        uint256 totalWinningPerMille = 0;
-        for (i = 0; i < _winners.length; i++) {
-            totalWinningPerMille += _winners[i].winningPerMille;
-        }
-        require(totalWinningPerMille == 1000, "Total winning per mille must be 1000");
-
         // Distribute prizes based on winning per mille
-        for (i = 0; i < _winners.length; i++) {
-            address winnerAccount = _winners[i].account;
-            uint256 winnerPerMille = _winners[i].winningPerMille;
+        for (i = 0; i < _participants.length; i++) {
+            if (_participants[i].isWinner) {
+                address winnerAccount = _participants[i].account;
+                uint256 winnerPerMille = _participants[i].winningPerMille;
 
-            uint256 prizeAmount = (sum * winnerPerMille) / 1000;
-            pBalance[winnerAccount] += prizeAmount;
-            emit WonPrize(winnerAccount, prizeAmount);
+                uint256 prizeAmount = (sum * winnerPerMille) / 1000;
+                pBalance[winnerAccount] += prizeAmount;
+                emit WonPrize(winnerAccount, prizeAmount);
+            }
         }
     }
 
@@ -166,6 +191,15 @@ contract GameWallet is OwnableUpgradeable {
     function setTreasury(address _treasury) external onlyOwner {
         require(_treasury != address(0), "Invalid treasury address");
         treasury = _treasury;
+    }
+
+    /**
+    @dev Sets the prize fond wallet address.
+    @param _prizeFondWallet Prize fond wallet address.
+     */
+    function setPrizeFondWallet(address _prizeFondWallet) external onlyOwner {
+        require(_prizeFondWallet != address(0), "Invalid prize fond wallet address");
+        prizeFondWallet = _prizeFondWallet;
     }
 
     /**
