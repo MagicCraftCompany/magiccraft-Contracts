@@ -1,5 +1,6 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
+import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 
 const initBalance = 1000 * 1e9;
@@ -328,8 +329,8 @@ describe("Starting the test suite", () => {
       fondWallet.address
     );
 
-    const toDeposit = 1000000;
-    await gameWallet.connect(owner).ownerDeposit(bob.address, toDeposit);
+    const toDeposit = 10000;
+    await gameWallet.connect(owner).ownerDeposit([bob.address], [toDeposit]);
 
     const bobFinalBalance = await gameWallet.pBalance(bob.address);
     const prizeFondWalletFinalBalance = await gameWallet.pBalance(
@@ -343,7 +344,46 @@ describe("Starting the test suite", () => {
     );
 
     await expect(
-      gameWallet.connect(alice).ownerDeposit(bob.address, toDeposit)
+      gameWallet.connect(alice).ownerDeposit([bob.address], [toDeposit])
     ).to.be.revertedWith("Ownable: caller is not the owner");
+  });
+
+  it("Test: Owner deposit balance to a multiple wallet", async function () {
+    const { alice, bob, johnny, joey, gameWallet, owner, balance, fondWallet } =
+      await loadFixture(initFixtureWithBalanceInGameWallet);
+
+    const prizeFondWalletInitBalance = await gameWallet.pBalance(
+      fondWallet.address
+    );
+
+    const johnnyDeposit = 999;
+    const toDeposit = 10000;
+    const deposits = [toDeposit, toDeposit, johnnyDeposit];
+    await gameWallet
+      .connect(owner)
+      .ownerDeposit([bob.address, joey.address, johnny.address], deposits);
+
+    const bobFinalBalance = await gameWallet.pBalance(bob.address);
+    const prizeFondWalletFinalBalance = await gameWallet.pBalance(
+      fondWallet.address
+    );
+
+    expect(bobFinalBalance).to.eq(balance + toDeposit, "Bob has wrong balance");
+    expect(await gameWallet.pBalance(joey.address)).to.eq(
+      balance + toDeposit,
+      "Joey has wrong balance"
+    );
+    expect(await gameWallet.pBalance(johnny.address)).to.eq(
+      balance + johnnyDeposit,
+      "Johnny has wrong balance"
+    );
+    expect(
+      prizeFondWalletFinalBalance.eq(
+        prizeFondWalletInitBalance.sub(
+          deposits.reduce((acc, item) => acc + item, 0)
+        )
+      ),
+      "Prize fond wallet has wrong balance"
+    );
   });
 });

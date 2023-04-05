@@ -88,18 +88,36 @@ contract GameWallet is OwnableUpgradeable {
     ///////////////////////
 
     /**
-    @dev Allows the owner to deposit balance to a specified wallet from prizeFondWallet's balance.
-    @param _recipient The address of the recipient wallet.
-    @param _amount The amount of tokens to be transferred.
+    @dev Allows the owner to deposit balance to multiple specified wallets from prizeFondWallet's balance.
+    @param _recipients The array of recipient addresses.
+    @param _amounts The array of amounts of tokens to be transferred to each corresponding recipient.
     */
-    function ownerDeposit(address _recipient, uint256 _amount) external onlyOwner {
-        require(_recipient != address(0), "Invalid recipient address");
-        require(pBalance[prizeFondWallet] >= _amount, "Not enough balance in prize fond wallet");
+    function ownerDeposit(
+        address[] calldata _recipients,
+        uint256[] calldata _amounts
+    ) external onlyOwner {
+        require(
+            _recipients.length != 0 && _recipients.length == _amounts.length,
+            "Invalid recipients or amounts array"
+        );
 
-        pBalance[prizeFondWallet] -= _amount;
-        pBalance[_recipient] += _amount;
+        uint256 totalAmount = 0;
+        for (uint256 i = 0; i < _recipients.length; i++) {
+            address recipient = _recipients[i];
+            uint256 amount = _amounts[i];
 
-        emit Deposited(_recipient, _amount);
+            require(recipient != address(0), "Invalid recipient address");
+            totalAmount += amount;
+
+            pBalance[recipient] += amount;
+            emit Deposited(recipient, amount);
+        }
+
+        require(
+            pBalance[prizeFondWallet] >= totalAmount,
+            "Not enough balance in prize fond wallet"
+        );
+        pBalance[prizeFondWallet] -= totalAmount;
     }
 
     /**
