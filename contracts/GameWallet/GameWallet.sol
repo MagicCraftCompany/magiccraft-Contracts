@@ -127,20 +127,21 @@ contract GameWallet is OwnableUpgradeable {
     @param _distributeFromPrizeFondWallet If true, distribute prize from the prizeFondWallet; otherwise, distribute from entry fees.
     */
     function winPrize(
-        Participant[] memory _participants,
+        Participant[] calldata _participants,
         uint256 _prizePoolAmount,
         bool _distributeFromPrizeFondWallet
     ) external onlyOwner {
-        require(_participants.length != 0, "Invalid participants array");
+        uint256 len = _participants.length;
+        require(len != 0, "Invalid participants array");
 
         uint256 sum;
         uint256 i;
 
         if (!_distributeFromPrizeFondWallet) {
-            uint256 participantEntryFee = _prizePoolAmount / _participants.length;
+            uint256 participantEntryFee = _prizePoolAmount / len;
 
             // Process participants and collect entry fees
-            for (i; i < _participants.length; i++) {
+            for (i; i < len; ) {
                 address participantAccount = _participants[i].account;
                 bool isWinner = _participants[i].isWinner;
 
@@ -154,6 +155,10 @@ contract GameWallet is OwnableUpgradeable {
                     sum += participantEntryFee;
                     emit Deducted(participantAccount, participantEntryFee);
                 }
+
+                unchecked {
+                    ++i;
+                }
             }
         } else {
             require(
@@ -166,9 +171,13 @@ contract GameWallet is OwnableUpgradeable {
 
         // Check if total winning per mille is 1000
         uint256 totalWinningPerMille = 0;
-        for (i = 0; i < _participants.length; i++) {
+        for (i = 0; i < len; ) {
             if (_participants[i].isWinner) {
                 totalWinningPerMille += _participants[i].winningPerMille;
+            }
+
+            unchecked {
+                ++i;
             }
         }
         require(totalWinningPerMille == 1000, "Total winning per mille must be 1000");
@@ -181,7 +190,7 @@ contract GameWallet is OwnableUpgradeable {
         }
 
         // Distribute prizes based on winning per mille
-        for (i = 0; i < _participants.length; i++) {
+        for (i = 0; i < len; ) {
             if (_participants[i].isWinner) {
                 address winnerAccount = _participants[i].account;
                 uint256 winnerPerMille = _participants[i].winningPerMille;
@@ -190,6 +199,10 @@ contract GameWallet is OwnableUpgradeable {
                 pBalance[winnerAccount] += prizeAmount;
                 emit WonPrize(winnerAccount, prizeAmount);
             }
+
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -197,11 +210,51 @@ contract GameWallet is OwnableUpgradeable {
     @dev Locks the accounts for a specified duration.
     @param _accounts Array of accounts to lock.
      */
-    function lockAccounts(address[] memory _accounts) external onlyOwner {
+    function lockAccounts(address[] calldata _accounts) external onlyOwner {
         require(_accounts.length != 0, "Invalid array length");
 
-        for (uint256 i; i < _accounts.length; i++) {
+        uint256 len = _accounts.length;
+        for (uint256 i; i < len; ) {
             lockUntil[_accounts[i]] = block.timestamp + lockDuration;
+
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    /**
+    @dev Locks the accounts indefinitely.
+    @param _accounts Array of accounts to lock.
+     */
+    function lockAccountsIndefinitely(address[] calldata _accounts) external onlyOwner {
+        require(_accounts.length != 0, "Invalid array length");
+
+        uint256 len = _accounts.length;
+        for (uint256 i; i < len; ) {
+            lockUntil[_accounts[i]] = type(uint256).max;
+
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    /**
+    @dev unlock the indefinitely locked accounts.
+    @param _accounts Array of accounts to unlock.
+     */
+    function unlockAccountsIndefinitely(address[] calldata _accounts) external onlyOwner {
+        require(_accounts.length != 0, "Invalid array length");
+
+        uint256 len = _accounts.length;
+        for (uint256 i; i < len; ) {
+            if (lockUntil[_accounts[i]] == type(uint256).max)
+                lockUntil[_accounts[i]] = block.timestamp;
+
+            unchecked {
+                ++i;
+            }
         }
     }
 
