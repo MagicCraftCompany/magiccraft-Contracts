@@ -215,7 +215,8 @@ contract GameWallet is OwnableUpgradeable {
 
         uint256 len = _accounts.length;
         for (uint256 i; i < len; ) {
-            lockUntil[_accounts[i]] = block.timestamp + lockDuration;
+            if (lockUntil[_accounts[i]] != type(uint256).max)
+                lockUntil[_accounts[i]] = block.timestamp + lockDuration;
 
             unchecked {
                 ++i;
