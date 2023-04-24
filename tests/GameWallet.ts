@@ -1,4 +1,4 @@
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
@@ -319,6 +319,58 @@ describe("Starting the test suite", () => {
     await gameWallet.connect(bob).manageBalance(false, toWithdraw);
 
     expect(await gameWallet.pBalance(bob.address)).to.eq(balance - toWithdraw);
+  });
+
+  it("Test: Lock Indefinitely - revert when not from owner", async function () {
+    const { alice, gameWallet } = await loadFixture(
+      initFixtureWithBalanceInGameWallet
+    );
+    await expect(
+      gameWallet.connect(alice).lockAccountsIndefinitely([alice.address])
+    ).to.be.revertedWith("Ownable: caller is not the owner");
+  });
+
+  it("Test: Lock Indefinitely", async function () {
+    const { bob, gameWallet, owner } = await loadFixture(
+      initFixtureWithBalanceInGameWallet
+    );
+    await gameWallet.connect(owner).lockAccountsIndefinitely([bob.address]);
+
+    const bobInfo = await gameWallet.lockUntil(bob.address);
+
+    await expect(bobInfo).to.be.eq(ethers.constants.MaxUint256.toHexString());
+    await expect(
+      gameWallet.connect(bob).manageBalance(false, 1)
+    ).to.be.revertedWith("Account locked for withdraw");
+  });
+
+  it("Test: Unlock Indefinitely - revert when not from owner", async function () {
+    const { alice, gameWallet } = await loadFixture(
+      initFixtureWithBalanceInGameWallet
+    );
+    await expect(
+      gameWallet.connect(alice).unlockAccountsIndefinitely([alice.address])
+    ).to.be.revertedWith("Ownable: caller is not the owner");
+  });
+
+  it("Test: Unlock Indefinitely", async function () {
+    const { bob, gameWallet, owner } = await loadFixture(
+      initFixtureWithBalanceInGameWallet
+    );
+
+    // lock bob address
+    await gameWallet.connect(owner).lockAccountsIndefinitely([bob.address]);
+
+    // unlock bob address
+    await gameWallet.connect(owner).unlockAccountsIndefinitely([bob.address]);
+
+    // get bob lockUntil value
+    const bobInfo = await gameWallet.lockUntil(bob.address);
+    await expect(bobInfo).to.be.eq(await time.latest());
+
+    await expect(gameWallet.connect(bob).manageBalance(false, 1))
+      .to.emit(gameWallet, "Withdrawn")
+      .withArgs(bob.address, 1);
   });
 
   it("Test: Owner deposit balance to a specified wallet", async function () {
