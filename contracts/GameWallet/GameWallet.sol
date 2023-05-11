@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-
 /**
  * @title GameWallet
  * @dev A contract for managing participants' token balances and distributing prizes.
@@ -44,12 +43,15 @@ contract GameWallet is OwnableUpgradeable {
         address account;
         uint256 winningPerMille;
         bool isWinner;
+        address stakeholderAccount;
+        uint256 stakeholderFeePermille;
     }
 
     event Deposited(address indexed account, uint256 amount);
     event Withdrawn(address indexed account, uint256 amount);
     event Deducted(address indexed account, uint256 amount);
     event WonPrize(address indexed account, uint256 amount);
+    event StakeHolderFeeSent(address indexed account, uint256 amount);
     event PrizeFeeSent(address indexed account, uint256 amount);
 
     /**
@@ -170,12 +172,16 @@ contract GameWallet is OwnableUpgradeable {
         }
 
         // Check if total winning per mille is 1000
-        uint256 totalWinningPerMille = 0;
+        uint256 totalWinningPerMille;
+        uint256 totalStakeholderFee;
         for (i = 0; i < len; ) {
             if (_participants[i].isWinner) {
                 totalWinningPerMille += _participants[i].winningPerMille;
+                if(_participants[i].stakeholderAccount != address(0) && _participants[i].stakeholderFeePermille > 0) {
+                    require(_participants[i].account != _participants[i].stakeholderAccount, "account and stakeholder can not be equal");
+                    totalStakeholderFee += (sum * _participants[i].stakeholderFeePermille) / 1000;
+                }
             }
-
             unchecked {
                 ++i;
             }
@@ -183,21 +189,35 @@ contract GameWallet is OwnableUpgradeable {
         require(totalWinningPerMille == 1000, "Total winning per mille must be 1000");
 
         // sent royalty to tresury
-        if ((sum * prizeFee) / 1e4 != 0 && treasury != address(0)) {
-            pBalance[treasury] += (sum * prizeFee) / 1e4;
-            emit PrizeFeeSent(treasury, (sum * prizeFee) / 1e4);
-            sum -= (sum * prizeFee) / 1e4;
+        uint256 sumWithoutFees = sum;
+        uint256 treasuryFee = (sum * prizeFee) / 1e4;
+        if (treasuryFee != 0 && treasury != address(0)) {
+            if((treasuryFee - totalStakeholderFee) > 0) {
+                treasuryFee = treasuryFee - totalStakeholderFee;
+            }
+        
+            pBalance[treasury] += treasuryFee;
+            emit PrizeFeeSent(treasury, treasuryFee);
+            sum -= treasuryFee;
         }
 
         // Distribute prizes based on winning per mille
         for (i = 0; i < len; ) {
-            if (_participants[i].isWinner) {
-                address winnerAccount = _participants[i].account;
-                uint256 winnerPerMille = _participants[i].winningPerMille;
+            Participant memory participant = _participants[i];
+            if (participant.isWinner) {
+                address winnerAccount = participant.account;
+                uint256 winnerPerMille = participant.winningPerMille;
 
                 uint256 prizeAmount = (sum * winnerPerMille) / 1000;
                 pBalance[winnerAccount] += prizeAmount;
                 emit WonPrize(winnerAccount, prizeAmount);
+
+                if(participant.stakeholderAccount != address(0) && participant.stakeholderFeePermille > 0) {
+                    // Distribute stakeholders fees
+                    uint256 stakeHolderFeeAmount = (sumWithoutFees * participant.stakeholderFeePermille) / 1000;
+                    pBalance[participant.stakeholderAccount] += stakeHolderFeeAmount;
+                    emit StakeHolderFeeSent(participant.stakeholderAccount, stakeHolderFeeAmount);
+                }
             }
 
             unchecked {

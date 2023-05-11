@@ -1,12 +1,12 @@
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 
 const initBalance = 1000 * 1e9;
 const prizeFeePercent = 10;
+const ADDRESS_0 = "0x0000000000000000000000000000000000000000";
 
-describe("Starting the test suite", () => {
+describe.only("Starting the test suite", () => {
   async function initFixture() {
     const [
       owner,
@@ -126,9 +126,27 @@ describe("Starting the test suite", () => {
 
     await gameWallet.connect(owner).winPrize(
       [
-        { account: bob.address, winningPerMille: 0, isWinner: false },
-        { account: alice.address, winningPerMille: 1000, isWinner: true },
-        { account: johnny.address, winningPerMille: 0, isWinner: true },
+        {
+          account: bob.address,
+          winningPerMille: 0,
+          isWinner: false,
+          stakeholderAccount: ADDRESS_0,
+          stakeholderFeePermille: 0,
+        },
+        {
+          account: alice.address,
+          winningPerMille: 1000,
+          isWinner: true,
+          stakeholderAccount: ADDRESS_0,
+          stakeholderFeePermille: 0,
+        },
+        {
+          account: johnny.address,
+          winningPerMille: 0,
+          isWinner: true,
+          stakeholderAccount: ADDRESS_0,
+          stakeholderFeePermille: 0,
+        },
       ],
       prizePool,
       true
@@ -169,8 +187,20 @@ describe("Starting the test suite", () => {
 
     await gameWallet.connect(owner).winPrize(
       [
-        { account: bob.address, winningPerMille: 0, isWinner: false },
-        { account: alice.address, winningPerMille: 1000, isWinner: true },
+        {
+          account: bob.address,
+          winningPerMille: 0,
+          isWinner: false,
+          stakeholderAccount: ADDRESS_0,
+          stakeholderFeePermille: 0,
+        },
+        {
+          account: alice.address,
+          winningPerMille: 1000,
+          isWinner: true,
+          stakeholderAccount: ADDRESS_0,
+          stakeholderFeePermille: 0,
+        },
       ],
       entryFee * 2,
       false
@@ -182,6 +212,55 @@ describe("Starting the test suite", () => {
 
     expect(await gameWallet.pBalance(treasury.address)).to.eq(royalty);
 
+    const aliceFinalBalance = await gameWallet.pBalance(alice.address);
+
+    expect(aliceFinalBalance).to.eq(
+      aliceInitBalance.add(winAmount),
+      "Alice has wrong balance"
+    );
+
+    expect(await gameWallet.pBalance(bob.address)).to.eq(balance - entryFee);
+  });
+
+  it("Test: WinPrize two players and 1 Stakeholder", async function () {
+    const { alice, bob, johnny, treasury, gameWallet, owner, balance } =
+      await loadFixture(initFixtureWithBalanceInGameWallet);
+
+    const aliceInitBalance = await gameWallet.pBalance(alice.address);
+    const johnnyInitBalance = await gameWallet.pBalance(johnny.address);
+    const entryFee = 100 * 1e9;
+
+    const players = [
+      {
+        account: bob.address,
+        winningPerMille: 0,
+        isWinner: false,
+        stakeholderAccount: ADDRESS_0,
+        stakeholderFeePermille: 0,
+      },
+      {
+        account: alice.address,
+        winningPerMille: 1000,
+        isWinner: true,
+        stakeholderAccount: johnny.address,
+        stakeholderFeePermille: 5,
+      },
+    ];
+
+    await gameWallet.connect(owner).winPrize(players, entryFee * 2, false);
+
+    let royalty = (entryFee * prizeFeePercent) / 100;
+
+    const stakeholderFee =
+      (entryFee * players[1].stakeholderFeePermille) / 1000;
+    royalty = royalty - stakeholderFee;
+
+    const winAmount = entryFee - royalty;
+
+    expect(await gameWallet.pBalance(treasury.address)).to.eq(royalty);
+    expect(await gameWallet.pBalance(johnny.address)).to.eq(
+      +johnnyInitBalance + +stakeholderFee
+    );
     const aliceFinalBalance = await gameWallet.pBalance(alice.address);
 
     expect(aliceFinalBalance).to.eq(
@@ -235,6 +314,8 @@ describe("Starting the test suite", () => {
           account,
           winningPerMille,
           isWinner: winners.includes(account),
+          stakeholderAccount: ADDRESS_0,
+          stakeholderFeePermille: 0,
         };
       }),
       entryFee * players.length,
