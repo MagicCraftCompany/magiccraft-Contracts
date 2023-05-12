@@ -251,8 +251,7 @@ describe.only("Starting the test suite", () => {
 
     let royalty = (entryFee * prizeFeePercent) / 100;
 
-    const stakeholderFee =
-      (entryFee * players[1].stakeholderFeePermille) / 1000;
+    const stakeholderFee = (royalty * players[1].stakeholderFeePermille) / 1000;
     royalty = royalty - stakeholderFee;
 
     const winAmount = entryFee - royalty;
