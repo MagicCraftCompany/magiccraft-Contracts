@@ -173,14 +173,9 @@ contract GameWallet is OwnableUpgradeable {
 
         // Check if total winning per mille is 1000
         uint256 totalWinningPerMille;
-        uint256 totalStakeholderFee;
         for (i = 0; i < len; ) {
             if (_participants[i].isWinner) {
                 totalWinningPerMille += _participants[i].winningPerMille;
-                if(_participants[i].stakeholderAccount != address(0) && _participants[i].stakeholderFeePermille > 0) {
-                    require(_participants[i].account != _participants[i].stakeholderAccount, "account and stakeholder can not be equal");
-                    totalStakeholderFee += (sum * _participants[i].stakeholderFeePermille) / 1000;
-                }
             }
             unchecked {
                 ++i;
@@ -189,11 +184,26 @@ contract GameWallet is OwnableUpgradeable {
         require(totalWinningPerMille == 1000, "Total winning per mille must be 1000");
 
         // sent royalty to tresury
-        uint256 sumWithoutFees = sum;
         uint256 treasuryFee = (sum * prizeFee) / 1e4;
         if (treasuryFee != 0 && treasury != address(0)) {
-            if((treasuryFee - totalStakeholderFee) > 0) {
-                treasuryFee = treasuryFee - totalStakeholderFee;
+            // Distribute stakeholders fees
+            for (i = 0; i < len; ) {
+                Participant memory participant = _participants[i];
+                if (participant.isWinner) {
+                    if(participant.stakeholderAccount != address(0) && participant.stakeholderFeePermille > 0) {
+                        require(participant.account != participant.stakeholderAccount, "account and stakeholder can not be equal");
+                        uint256 stakeholderFee = (treasuryFee * participant.stakeholderFeePermille) / 1000;
+                        if(stakeholderFee > treasuryFee) {
+                            break;
+                        }
+                        treasuryFee -= stakeholderFee;
+                        pBalance[participant.stakeholderAccount] += stakeholderFee;
+                        emit StakeHolderFeeSent(participant.stakeholderAccount, stakeholderFee);
+                    }
+                }
+                unchecked {
+                    ++i;
+                }
             }
         
             pBalance[treasury] += treasuryFee;
@@ -212,12 +222,6 @@ contract GameWallet is OwnableUpgradeable {
                 pBalance[winnerAccount] += prizeAmount;
                 emit WonPrize(winnerAccount, prizeAmount);
 
-                if(participant.stakeholderAccount != address(0) && participant.stakeholderFeePermille > 0) {
-                    // Distribute stakeholders fees
-                    uint256 stakeHolderFeeAmount = (sumWithoutFees * participant.stakeholderFeePermille) / 1000;
-                    pBalance[participant.stakeholderAccount] += stakeHolderFeeAmount;
-                    emit StakeHolderFeeSent(participant.stakeholderAccount, stakeHolderFeeAmount);
-                }
             }
 
             unchecked {
