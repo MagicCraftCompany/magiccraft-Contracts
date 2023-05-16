@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
 /**
  * @title GameWallet
  * @dev A contract for managing participants' token balances and distributing prizes.
@@ -51,7 +52,7 @@ contract GameWallet is OwnableUpgradeable {
     event Withdrawn(address indexed account, uint256 amount);
     event Deducted(address indexed account, uint256 amount);
     event WonPrize(address indexed account, uint256 amount);
-    event StakeHolderFeeSent(address indexed account, uint256 amount);
+    event StakeHolderFeeSent(address indexed account, address indexed forAccount, uint256 amount);
     event PrizeFeeSent(address indexed account, uint256 amount);
 
     /**
@@ -190,22 +191,37 @@ contract GameWallet is OwnableUpgradeable {
             for (i = 0; i < len; ) {
                 Participant memory participant = _participants[i];
                 if (participant.isWinner) {
-                    if(participant.stakeholderAccount != address(0) && participant.stakeholderFeePermille > 0) {
-                        require(participant.account != participant.stakeholderAccount, "account and stakeholder can not be equal");
-                        uint256 stakeholderFee = (treasuryFee * participant.stakeholderFeePermille) / 1000;
-                        if(stakeholderFee > treasuryFee) {
+                    if (
+                        participant.stakeholderAccount != address(0) &&
+                        participant.stakeholderFeePermille > 0
+                    ) {
+                        require(
+                            participant.account != participant.stakeholderAccount,
+                            "account and stakeholder can not be equal"
+                        );
+                        require(
+                            participant.stakeholderFeePermille <= 500,
+                            "Maximum stakeholder fee is 50%"
+                        );
+                        uint256 stakeholderFee = (((treasuryFee * participant.winningPerMille) /
+                            1000) * participant.stakeholderFeePermille) / 1000;
+                        if (stakeholderFee > treasuryFee) {
                             break;
                         }
                         treasuryFee -= stakeholderFee;
                         pBalance[participant.stakeholderAccount] += stakeholderFee;
-                        emit StakeHolderFeeSent(participant.stakeholderAccount, stakeholderFee);
+                        emit StakeHolderFeeSent(
+                            participant.stakeholderAccount,
+                            participant.account,
+                            stakeholderFee
+                        );
                     }
                 }
                 unchecked {
                     ++i;
                 }
             }
-        
+
             pBalance[treasury] += treasuryFee;
             emit PrizeFeeSent(treasury, treasuryFee);
             sum -= treasuryFee;
@@ -221,7 +237,6 @@ contract GameWallet is OwnableUpgradeable {
                 uint256 prizeAmount = (sum * winnerPerMille) / 1000;
                 pBalance[winnerAccount] += prizeAmount;
                 emit WonPrize(winnerAccount, prizeAmount);
-
             }
 
             unchecked {
