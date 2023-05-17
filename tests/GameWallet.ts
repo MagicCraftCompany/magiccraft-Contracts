@@ -1,12 +1,11 @@
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-
+import { ADDRESS_0 } from "./utils/constants";
 const initBalance = 1000 * 1e9;
 const prizeFeePercent = 10;
-const ADDRESS_0 = "0x0000000000000000000000000000000000000000";
 
-describe.only("Starting the test suite", () => {
+describe("Starting the test suite", () => {
   async function initFixture() {
     const [
       owner,
