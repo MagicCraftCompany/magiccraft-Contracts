@@ -254,7 +254,7 @@ describe.only("Starting the test suite", () => {
     const stakeholderFee = (royalty * players[1].stakeholderFeePermille) / 1000;
     royalty = royalty - stakeholderFee;
 
-    const winAmount = entryFee - royalty;
+    const winAmount = entryFee - royalty - stakeholderFee;
 
     expect(await gameWallet.pBalance(treasury.address)).to.eq(royalty);
     expect(await gameWallet.pBalance(johnny.address)).to.eq(

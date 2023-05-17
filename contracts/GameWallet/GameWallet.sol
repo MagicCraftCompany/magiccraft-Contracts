@@ -210,6 +210,8 @@ contract GameWallet is OwnableUpgradeable {
                         }
                         treasuryFee -= stakeholderFee;
                         pBalance[participant.stakeholderAccount] += stakeholderFee;
+                        sum -= stakeholderFee;
+
                         emit StakeHolderFeeSent(
                             participant.stakeholderAccount,
                             participant.account,
