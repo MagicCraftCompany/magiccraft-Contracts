@@ -242,7 +242,7 @@ describe("Starting the test suite", () => {
         winningPerMille: 1000,
         isWinner: true,
         stakeholderAccount: johnny.address,
-        stakeholderFeePermille: 5,
+        stakeholderFeePermille: 200,
       },
     ];
 
@@ -312,7 +312,7 @@ describe("Starting the test suite", () => {
           account,
           winningPerMille,
           isWinner: winners.includes(account),
-          stakeholderAccount: ADDRESS_0,
+          stakeholderAccount: ethers.constants.AddressZero,
           stakeholderFeePermille: 0,
         };
       }),

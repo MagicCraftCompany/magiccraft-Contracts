@@ -57,6 +57,8 @@ contract MagicNFT is
     uint256 public DISCOUNT_DIVIDER;
     uint256 public discountMinted;
 
+    mapping(address => uint256) public vcInfo;
+
     modifier onlyMinter() {
         require(minters[msg.sender], "Invalid minter");
         _;
@@ -140,15 +142,16 @@ contract MagicNFT is
         require(isPublicSale, "Public sale is not open yet");
 
         uint256 mintPrice = publicMintPriceForEach;
-        if (
-            block.timestamp >= discountStartTime &&
-            block.timestamp <= discountStartTime + discountDuration
-        ) {
-            mintPrice = (mintPrice * discountPercent) / DISCOUNT_DIVIDER;
-            require(msg.value == mintPrice * _amount, "Pay Exact Amount");
+        bool isVCSale = vcInfo[msg.sender] != 0;
+        if (isVCSale) {
+            // 15% percent discount for VC sale
+            mintPrice = (mintPrice * 85) / 100;
+            if (vcInfo[msg.sender] < _amount) _amount = vcInfo[msg.sender];
 
-            require(_amount + discountMinted <= 1e3, "Max Discount Number Reached");
-            discountMinted += _amount;
+            require(msg.value == mintPrice * _amount, "Pay Exact Amount");
+            publicMintSpotBought[_msgSender()] += _amount;
+            publicMinted += _amount;
+            vcInfo[msg.sender] -= _amount;
         } else {
             require(
                 _amount + publicMintSpotBought[_msgSender()] <= maxPublicMintForEach,
@@ -159,6 +162,9 @@ contract MagicNFT is
             publicMintSpotBought[_msgSender()] += _amount;
             publicMinted += _amount;
         }
+
+        // 10% discount by sending one more NFT per 10 NFTs
+        if (!isVCSale) _amount += _amount / 10;
 
         for (uint256 i = _currentIndex; i <= _currentIndex + _amount; i++) {
             _setTokenRoyalty(i, msg.sender, ROYALTY_PERCENT);
@@ -205,6 +211,11 @@ contract MagicNFT is
     function setDesignatedSigner(address _signer) external onlyOwner {
         require(_signer != address(0), "Invalid address for signer");
         designatedSigner = _signer;
+    }
+
+    function setVCInfo(address _vcAccount, uint256 _amount) external onlyOwner {
+        require(_vcAccount != address(0), "Invalid address for vc account");
+        vcInfo[_vcAccount] = _amount;
     }
 
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
