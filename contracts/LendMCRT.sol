@@ -5,7 +5,9 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./GameWallet/GameWallet.sol";
+import "hardhat/console.sol";
 
 contract LendMCRT is OwnableUpgradeable {
     using SafeMathUpgradeable for uint256;
@@ -23,6 +25,7 @@ contract LendMCRT is OwnableUpgradeable {
     mapping(address => uint256) public claims;
 
     event Deposit(address indexed from, uint256 amount);
+    event Claim(address indexed from, uint256 amount);
 
     function initialize(
         address mcrtTokenAddress_,
@@ -51,13 +54,14 @@ contract LendMCRT is OwnableUpgradeable {
         mcrtToken = IERC20Upgradeable(mcrtTokenAddress_);
         gameWallet = GameWallet(gameWalletAddress_);
         investor = investor_;
+        wallets = wallets_;
         amount = amount_;
         timePeriod = timePeriod_;
         investorPercentage = investorPercentage_;
         startTime = block.timestamp;
-
+        claims[investor] = 0;
         for (uint256 i = 0; i < wallets_.length; i++) {
-             claims[wallets_[i]] = 0;       
+             claims[wallets_[i]] = 0;
         }
     }
 
@@ -69,15 +73,27 @@ contract LendMCRT is OwnableUpgradeable {
     }
 
     function claim() external {
+        
         require(block.timestamp >= startTime.add(timePeriod), "claim: Claim period not started yet");
+        uint256 gameWalletBalance = gameWallet.pBalance(address(this));
+        require(gameWalletBalance > 0, "claim: game wallet balance is 0");
 
-        uint256 remainingAmount = gameWallet.pBalance(address(this));
-        gameWallet.manageBalance(false, amount);
-        uint256 investorClaimAmount = remainingAmount.mul(investorPercentage).div(100);
-        uint256 playerClaimAmount = remainingAmount.sub(investorClaimAmount).div(wallets.length);
+        uint256 investorAmount = claims[investor] >= amount ? gameWalletBalance : amount.sub(claims[investor]);
+        uint256 winnings = gameWalletBalance.sub(investorAmount);
+
+        uint256 playerClaimAmount;
+        if(winnings > 0) {
+            uint256 remainingForInvestor = (winnings.mul(investorPercentage).div(100));
+            investorAmount = investorAmount.add(remainingForInvestor);
+            winnings = winnings.sub(remainingForInvestor);
+            playerClaimAmount = winnings.div(wallets.length);
+        }
 
         if (msg.sender == investor) {
-            mcrtToken.safeTransfer(investor, investorClaimAmount);
+            claims[msg.sender] += investorAmount;
+            gameWallet.manageBalance(false, investorAmount);
+            mcrtToken.safeTransfer(msg.sender, investorAmount);
+            emit Claim(msg.sender, investorAmount);
         } else {
             bool isWallet = false;
             for (uint256 i = 0; i < wallets.length; i++) {
@@ -86,9 +102,15 @@ contract LendMCRT is OwnableUpgradeable {
                     break;
                 }
             }
-
             require(isWallet, "claim: Caller not authorized to claim");
-            mcrtToken.safeTransfer(msg.sender, playerClaimAmount);
+            require(playerClaimAmount > 0, "claim: player remaining amount is 0");
+            playerClaimAmount = playerClaimAmount.sub(claims[msg.sender]);
+            if(playerClaimAmount > 0) {
+                claims[msg.sender] += playerClaimAmount;
+                gameWallet.manageBalance(false, playerClaimAmount);
+                mcrtToken.safeTransfer(msg.sender, playerClaimAmount);
+                emit Claim(msg.sender, playerClaimAmount);
+            }
         }
     }
 }

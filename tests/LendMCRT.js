@@ -1,7 +1,7 @@
 
 const { ethers } = require("hardhat");
 const { ADDRESS_0 } = require('./utils/constants');
-const initBalance = 1000 * 1e9;
+const initiaInvestorBalance = 1000 * 1e9;
 const prizeFeePercent = 10;
 
 describe.only("LendMCRT Test", () => {
@@ -10,7 +10,6 @@ describe.only("LendMCRT Test", () => {
         johnny,
         jackie,
         joey,
-        chloe,
         moe,
         fondWallet,
         treasury,
@@ -30,7 +29,6 @@ describe.only("LendMCRT Test", () => {
             johnny,
             jackie,
             joey,
-            chloe,
             moe,
             fondWallet,
             treasury
@@ -45,23 +43,21 @@ describe.only("LendMCRT Test", () => {
         gameWallet = await GameWallet.deploy();
         gameWallet.connect(owner).initialize(mcrt.address);
         await gameWallet.setLockDuration(600);
-        await mcrt.connect(owner).transfer(fondWallet.address, initBalance); // 1000 MCRT
 
         // SENDS SOME FUNDS TO THE INVESTOR
-        await mcrt.connect(owner).transfer(investor.address, initBalance);
+        await mcrt.connect(owner).transfer(investor.address, initiaInvestorBalance);
 
+        // WALLETS STORED IN THE LendMCRT CONTRACT
         wallets = [
             bob.address,
             johnny.address,
             jackie.address,
-            joey.address,
-            chloe.address,
-            moe.address
+            joey.address
         ]
 
         await Promise.all(
             wallets.map((wallet) => {
-                return mcrt.connect(owner).transfer(wallet, initBalance); // 1000 MCRT
+                return mcrt.connect(owner).transfer(wallet, initiaInvestorBalance); // 1000 MCRT
             })
         );
 
@@ -70,14 +66,14 @@ describe.only("LendMCRT Test", () => {
         await gameWallet.setPrizeFee(prizeFeePercent * 100);
 
         // LendMCRT DEFAULT VALUES
-        investedAmount = initBalance / 2;
+        investedAmount = initiaInvestorBalance / 2;
         timePeriod = 60 * 60 * 24 * 7; // one week in seconds
         investorPercentage = 10;
         const LendMCRT = await ethers.getContractFactory("LendMCRT");
         lendMCRT = await LendMCRT.deploy();
     })
 
-    // INITIALISE - UNHAPPY PATHS
+    // INITIALISE
     it("Should not initialise more than one time", async function () {
         await lendMCRT.connect(owner).initialize(mcrt.address, gameWallet.address, investor.address, wallets, investedAmount, timePeriod, investorPercentage);
         await expect(lendMCRT.connect(owner).initialize(mcrt.address, gameWallet.address, investor.address, wallets, investedAmount, timePeriod, investorPercentage)).to.be.revertedWith('Initializable: contract is already initialized');
@@ -111,21 +107,21 @@ describe.only("LendMCRT Test", () => {
         await expect(lendMCRT.connect(owner).initialize(mcrt.address, gameWallet.address, investor.address, wallets, investedAmount, timePeriod, 0)).to.be.revertedWith('initialize: Invalid investor percentage');
     });
 
-    // DEPOSIT - UNHAPPY PATHS
+    // DEPOSIT
     it("Should NOT approveGameWallet if the sender is not the owner", async function () {
         await lendMCRT.connect(owner).initialize(mcrt.address, gameWallet.address, investor.address, wallets, investedAmount, timePeriod, investorPercentage);
         await expect(lendMCRT.connect(owner).deposit()).to.be.revertedWith('Ownable: caller is not the owner');
     });
 
-    // DEPOSIT - HAPPY PATHS
     it("Should approveGameWallet", async function () {
         await lendMCRT.connect(owner).initialize(mcrt.address, gameWallet.address, investor.address, wallets, investedAmount, timePeriod, investorPercentage);
         await mcrt.connect(investor).approve(lendMCRT.address, investedAmount);
-        await lendMCRT.connect(investor).deposit();
+        await expect(lendMCRT.connect(investor).deposit()).to.emit(lendMCRT, 'Deposit');
+
         expect((await mcrt.balanceOf(gameWallet.address)).toString()).to.be.equal(investedAmount.toString());
     });
 
-    // CLAIM - UNHAPPY PATHS
+    // CLAIM
     it("Should NOT claim if the claim period is not started yet", async function () {
         await lendMCRT.connect(owner).initialize(mcrt.address, gameWallet.address, investor.address, wallets, investedAmount, timePeriod, investorPercentage);
         await mcrt.connect(investor).approve(lendMCRT.address, investedAmount);
@@ -133,7 +129,6 @@ describe.only("LendMCRT Test", () => {
         await expect(lendMCRT.connect(investor).claim()).to.be.revertedWith('claim: Claim period not started yet');
     });
 
-    // CLAIM - UNHAPPY PATHS
     it("Should NOT claim if the sender is not the investor and is not one of the wallets", async function () {
         timePeriod = 1;
         await lendMCRT.connect(owner).initialize(mcrt.address, gameWallet.address, investor.address, wallets, investedAmount, timePeriod, investorPercentage);
@@ -142,32 +137,176 @@ describe.only("LendMCRT Test", () => {
         await expect(lendMCRT.connect(owner).claim()).to.be.revertedWith('claim: Caller not authorized to claim');
     });
 
-    // CLAIM - HAPPY PATHS
-    it("Should claim if the sender is the investor and there are no wins and no losses", async function () {
-        // INVESTMENT = 500000000000
-        // The investor will be able to reclaim his whole invested amount
-        const expectedClaimAmount = investedAmount;
+    it("Should NOT claim if the sender is the investor and there are no remaing amounts", async function () {
         timePeriod = 1;
         await lendMCRT.connect(owner).initialize(mcrt.address, gameWallet.address, investor.address, wallets, investedAmount, timePeriod, investorPercentage);
         await mcrt.connect(investor).approve(lendMCRT.address, investedAmount);
         await lendMCRT.connect(investor).deposit();
+        const investorBalance = await mcrt.balanceOf(investor.address);
+
+        const expectedClaimAmount = +investorBalance + +investedAmount;
         await lendMCRT.connect(investor).claim();
-        expect((await mcrt.balanceOf(investor)).toString()).to.be.equal(expectedClaimAmount);
+
+        expect(await mcrt.balanceOf(investor.address)).to.be.equal(expectedClaimAmount);
+        expect(await gameWallet.pBalance(lendMCRT.address)).to.be.equal(0);
+
+        // TRY TO CLAIM AGAIN
+        await expect(lendMCRT.connect(investor).claim()).to.be.revertedWith('claim: game wallet balance is 0');
+    });
+
+    it("Should claim if the sender is the investor and there are no wins and no losses", async function () {
+        // INVESTMENT = 500000000000
+        // The investor will be able to reclaim his whole invested amount
+
+        timePeriod = 1;
+        await lendMCRT.connect(owner).initialize(mcrt.address, gameWallet.address, investor.address, wallets, investedAmount, timePeriod, investorPercentage);
+        await mcrt.connect(investor).approve(lendMCRT.address, investedAmount);
+        await lendMCRT.connect(investor).deposit();
+        const investorBalance = await mcrt.balanceOf(investor.address);
+
+        const expectedClaimAmount = +investorBalance + +investedAmount;
+        await expect(lendMCRT.connect(investor).claim()).to.emit(lendMCRT, 'Claim');
+
+        expect(await mcrt.balanceOf(investor.address)).to.be.equal(expectedClaimAmount);
+        expect(await gameWallet.pBalance(lendMCRT.address)).to.be.equal(0);
     });
 
     it("Should claim if the sender is the investor and there are wins", async function () {
         // INVESTMENT = 500000000000
         // The investor will be able to reclaim his whole invested amount PLUS 10% of the wins
-        const expectedClaimAmount = investedAmount;
-        timePeriod = 1;
-        const prizePool = 100 * 1e9;
 
-        await gameWallet.winPrize
+        timePeriod = 1;
         await lendMCRT.connect(owner).initialize(mcrt.address, gameWallet.address, investor.address, wallets, investedAmount, timePeriod, investorPercentage);
         await mcrt.connect(investor).approve(lendMCRT.address, investedAmount);
         await lendMCRT.connect(investor).deposit();
+
+        // SENDS SOME FUNDS TO ANOTHER USER TO JOIN IN THE GAME VS LendMCRT CONTRACT
+        const participantEntryFee = 1000000000000;
+        await mcrt.connect(owner).transfer(moe.address, participantEntryFee);
+        await mcrt.connect(moe).approve(gameWallet.address, participantEntryFee);
+        await gameWallet.connect(moe).manageBalance(true, participantEntryFee);
+
+        let gameWalletBalance = await gameWallet.pBalance(lendMCRT.address);
+
+        // WINNER PRIZE 
+        const prizePool = 100 * 1e9;
+        await gameWallet.connect(owner).winPrize(
+            [
+                {
+                    account: lendMCRT.address,
+                    winningPerMille: 1000,
+                    isWinner: true,
+                    stakeholderAccount: ADDRESS_0,
+                    stakeholderFeePermille: 0,
+                },
+                {
+                    account: moe.address,
+                    winningPerMille: 0,
+                    isWinner: false,
+                    stakeholderAccount: ADDRESS_0,
+                    stakeholderFeePermille: 0,
+                }
+            ],
+            prizePool,
+            false
+        );
+        gameWalletBalance = +(await gameWallet.pBalance(lendMCRT.address));
+        const expectedClaimAmount = initiaInvestorBalance + ((gameWalletBalance - investedAmount) * investorPercentage / 100);
+
         await lendMCRT.connect(investor).claim();
-        expect((await mcrt.balanceOf(investor)).toString()).to.be.equal(expectedClaimAmount);
+
+        expect((await mcrt.balanceOf(investor.address))).to.be.equal(expectedClaimAmount);
     });
 
+    it.only("Should claim for one participant and the investor when there are wins", async function () {
+        // INVESTMENT = 500000000000
+        // The investor will be able to reclaim his whole invested amount PLUS 10% of the wins
+
+        timePeriod = 1;
+        await lendMCRT.connect(owner).initialize(mcrt.address, gameWallet.address, investor.address, wallets, investedAmount, timePeriod, investorPercentage);
+        await mcrt.connect(investor).approve(lendMCRT.address, investedAmount);
+        await lendMCRT.connect(investor).deposit();
+
+        // // WINNER PRIZE 
+        const entryFee = 100 * 1e9;
+        const prizeFeePercent = 10;
+        const prizeFee = (entryFee * prizeFeePercent) / 100
+        console.log('prizeFee', prizeFee)
+
+        // SENDS SOME FUNDS TO ANOTHER USER TO JOIN IN THE GAME VS LendMCRT CONTRACT
+        await mcrt.connect(owner).transfer(moe.address, entryFee);
+        await mcrt.connect(moe).approve(gameWallet.address, entryFee);
+        await gameWallet.connect(moe).manageBalance(true, entryFee);
+
+        await gameWallet.connect(owner).winPrize(
+            [
+                {
+                    account: lendMCRT.address,
+                    winningPerMille: 1000,
+                    isWinner: true,
+                    stakeholderAccount: ADDRESS_0,
+                    stakeholderFeePermille: 0,
+                },
+                {
+                    account: moe.address,
+                    winningPerMille: 0,
+                    isWinner: false,
+                    stakeholderAccount: ADDRESS_0,
+                    stakeholderFeePermille: 0,
+                }
+            ],
+            entryFee * 2,
+            false
+        );
+
+        // CALCULATE THE REMAINING
+        let gameWalletBalance = +(await gameWallet.pBalance(lendMCRT.address));
+        console.log('gameWalletBalance', gameWalletBalance);
+        let remaining = gameWalletBalance - investedAmount;
+        console.log('REMAINING', remaining);
+        console.log('investedAmount', investedAmount);
+
+        // CALCULATE THE INVESTOR CLAIM AMOUNT
+        let investorRemainingPercentage = remaining * investorPercentage / 100;
+        console.log('investorRemainingPercentage', investorRemainingPercentage);
+        let expectedInvestorClaimAmount = investedAmount + investorRemainingPercentage;
+        console.log('expectedInvestorClaimAmount', expectedInvestorClaimAmount);
+        remaining = remaining - investorRemainingPercentage;
+        console.log('remaining', remaining);
+
+        // CALCULATE THE PARTICIPANT CLAIM AMOUNT
+        const expectedParticipantClaimAmount = remaining / wallets.length;
+        console.log('expectedParticipantClaimAmount', expectedParticipantClaimAmount);
+
+
+
+        // EVERY WALLET CLAIMS ITS PART
+        const bobBalance = +(await mcrt.balanceOf(bob.address));
+        const johnnyBalance = +(await mcrt.balanceOf(johnny.address));
+        await expect(lendMCRT.connect(bob).claim()).to.emit(lendMCRT, 'Claim');
+
+        console.log('gameWalletBalance2', gameWalletBalance);
+        expect(+(await mcrt.balanceOf(bob.address))).to.be.equal(bobBalance + expectedParticipantClaimAmount);
+
+        // CALCULATE THE REMAINING
+        gameWalletBalance = +(await gameWallet.pBalance(lendMCRT.address));
+        console.log('gameWalletBalance', gameWalletBalance);
+        remaining = gameWalletBalance - investedAmount;
+        console.log('REMAINING', remaining);
+        console.log('investedAmount', investedAmount);
+
+        // CALCULATE THE INVESTOR CLAIM AMOUNT
+        investorRemainingPercentage = remaining * investorPercentage / 100;
+        console.log('investorRemainingPercentage', investorRemainingPercentage);
+        expectedInvestorClaimAmount = investedAmount + investorRemainingPercentage;
+        console.log('expectedInvestorClaimAmount', expectedInvestorClaimAmount);
+        remaining = remaining - investorRemainingPercentage;
+        console.log('remaining', remaining);
+
+        const expectedClaimAmount = initiaInvestorBalance + ((gameWalletBalance - investedAmount) * investorPercentage / 100);
+
+        await lendMCRT.connect(investor).claim();
+
+        expect((await mcrt.balanceOf(investor.address))).to.be.equal(expectedClaimAmount);
+    });
 });
