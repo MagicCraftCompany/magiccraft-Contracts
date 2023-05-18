@@ -278,9 +278,7 @@ describe.only("LendMCRT Test", () => {
         const expectedParticipantClaimAmount = remaining / wallets.length;
         console.log('expectedParticipantClaimAmount', expectedParticipantClaimAmount);
 
-
-
-        // EVERY WALLET CLAIMS ITS PART
+        // A WALLET CLAIMS ITS PART
         const bobBalance = +(await mcrt.balanceOf(bob.address));
         const johnnyBalance = +(await mcrt.balanceOf(johnny.address));
         await expect(lendMCRT.connect(bob).claim()).to.emit(lendMCRT, 'Claim');
