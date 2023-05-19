@@ -19,7 +19,7 @@ contract LendMCRT is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     address public investor;
     uint256 public amount;
     uint256 public timePeriod;
-    uint256 public investorPercentage;
+    uint8 public investorPercentage;
     uint256 public startTime;
     uint256 walletsCount;
     address[] wallets;
@@ -35,7 +35,7 @@ contract LendMCRT is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         address[] calldata wallets_,
         uint256 amount_,
         uint256 timePeriod_,
-        uint256 investorPercentage_
+        uint8 investorPercentage_
     ) external initializer {
         require(mcrtTokenAddress_ != address(0), "initialize: Invalid MCRT token address");
         require(gameWalletAddress_ != address(0), "initialize: Invalid GameWallet address");
@@ -60,6 +60,7 @@ contract LendMCRT is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         startTime = block.timestamp;
         claims[investor] = 0;
         walletsCount = wallets_.length;
+        isAuthorizedWallet[investor] = true;
         for (uint256 i = 0; i < wallets_.length; i++) {
             address wallet = wallets_[i];
             require(wallet != address(0), "initialize: Invalid wallet address");
@@ -77,6 +78,7 @@ contract LendMCRT is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     function claim() external nonReentrant {
+        require(isAuthorizedWallet[msg.sender] == true, "claim: Caller not authorized to claim");
         require(block.timestamp >= startTime.add(timePeriod), "claim: Claim period not started yet");
         uint256 gameWalletBalance = gameWallet.pBalance(address(this));
         require(gameWalletBalance > 0, "claim: game wallet balance is 0");
@@ -101,7 +103,6 @@ contract LendMCRT is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             mcrtToken.safeTransfer(investor, investorClaimAmount);
             emit Claim(investor, investorClaimAmount);
         } else {
-            require(isAuthorizedWallet[msg.sender] == true, "claim: Caller not authorized to claim");
             playerClaimAmount = playerClaimAmount >= claims[msg.sender] ? playerClaimAmount.sub(claims[msg.sender]) : 0;
             require(playerClaimAmount > 0, "claim: player remaining amount is 0");
             claims[msg.sender] += playerClaimAmount;
