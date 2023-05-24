@@ -1,4 +1,4 @@
-//SPDX-License-Identifier: UNLICENSED
+//SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -8,7 +8,6 @@ import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "./GameWallet/GameWallet.sol";
-import "hardhat/console.sol";
 
 contract LendMCRT is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeMathUpgradeable for uint256;
@@ -19,19 +18,30 @@ contract LendMCRT is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     address public investor;
     uint256 public investment;
-    uint256 public investmentClaimed;
-    uint256 public timePeriod;
     uint256 public investorPercentage;
+
+    uint256 public timePeriod;
     uint256 public startTime;
+
     uint256 walletsCount;
-    uint256 lastGameWalletBalance;
     address[] wallets;
+
     mapping(address => uint256) public claims;
-    mapping(address => uint256) public claimsCount;
     mapping(address => bool) public isAuthorizedWallet;
+
     event Deposit(address indexed from, uint256 amount);
     event Claim(address indexed from, uint256 amount);
 
+    /**
+     * @dev Initializes the contract with the provided values.
+     * @param mcrtTokenAddress_ Address of the MCRT token.
+     * @param gameWalletAddress_ Address of the game wallet.
+     * @param investor_ Address of the investor.
+     * @param wallets_ Addresses of the wallets.
+     * @param amount_ Amount of the investor's investment.
+     * @param timePeriod_ Time period in seconds.
+     * @param investorPercentage_ Percentage of winnings the investor receives.
+     */
     function initialize(
         address mcrtTokenAddress_,
         address gameWalletAddress_,
@@ -74,6 +84,9 @@ contract LendMCRT is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         wallets = wallets_;
     }
 
+    /**
+     * @dev Allows the owner to deposit tokens into the contract.
+     */
     function deposit() external onlyOwner {
         mcrtToken.safeTransferFrom(msg.sender, address(this), investment);
         mcrtToken.approve(address(gameWallet), investment);
@@ -81,72 +94,44 @@ contract LendMCRT is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         emit Deposit(msg.sender, investment);
     }
 
+    /**
+     * @dev Allows authorized wallets to claim tokens from the contract.
+     */
     function claim() external nonReentrant {
-       
         require(isAuthorizedWallet[msg.sender] == true, "claim: Caller not authorized to claim");
         require(block.timestamp >= startTime.add(timePeriod), "claim: Claim period not started yet");
+        
         uint256 gameWalletBalance = gameWallet.pBalance(address(this));
         require(gameWalletBalance > 0, "claim: game wallet balance is 0");
-        console.log("investmentClaimed", investmentClaimed);
-        uint256 investementRemainToClaim;
-        uint256 winnings;
-        if(investmentClaimed < investment) {
-            investementRemainToClaim = investment.sub(investmentClaimed);
-            winnings = gameWalletBalance >= investementRemainToClaim ? gameWalletBalance.sub(investementRemainToClaim) : 0;
-        } else {
-            winnings = gameWalletBalance;
-        }
+        gameWallet.manageBalance(false, gameWalletBalance);
 
-        console.log("investementRemainToClaim", investementRemainToClaim);
-        uint256 investorClaimAmount;
+        uint256 contractBalance = mcrtToken.balanceOf(address(this));
+        uint256 investementRemainToClaim = investment > claims[investor] ? investment.sub(claims[investor]) : 0;
+        uint256 winnings = contractBalance > investementRemainToClaim ? contractBalance.sub(investementRemainToClaim) : 0;
+        uint256 investorClaimAmount = investementRemainToClaim;
         uint256 playerClaimAmount;
-        
+     
         if(winnings > 0) {
-            investorClaimAmount = (winnings.mul(investorPercentage).div(100));
-            winnings = winnings.sub(investorClaimAmount);
-            playerClaimAmount = winnings.div(walletsCount);
+            uint256 investorFeeAmount = (winnings.mul(investorPercentage).div(100));
+            investorClaimAmount = investorClaimAmount.add(investorFeeAmount);
+            playerClaimAmount = (winnings.sub(investorFeeAmount)).div(walletsCount);
         }
-
-        if (msg.sender == investor) {
-            console.log("investor_claimsCount", claimsCount[investor]);
-            if(lastGameWalletBalance == gameWalletBalance) {
-                for(uint256 i=0; i< wallets.length; i++)  {
-                    if(claimsCount[investor] > claimsCount[wallets[i]]) {
-                        investorClaimAmount = 0;
-                        break;
-                    }
-                }
-            }
-            console.log("lastGameWalletBalance", lastGameWalletBalance);
-            console.log("gameWalletBalance", gameWalletBalance);
-            console.log("claims[investor]", claims[investor]);
-            //investorClaimAmount = investorClaimAmount >= claims[investor] ? investorClaimAmount.sub(claims[investor]) : investorClaimAmount;
-            console.log("investorClaimAmount", investorClaimAmount);
-            if(investementRemainToClaim == 0) {
-                console.log("SONO QUI");
-                require(investorClaimAmount > 0, "claim: investor remaining amount is 0");
-            }
-            uint256 amountToclaim = investementRemainToClaim.add(investorClaimAmount);
-            console.log("amountToclaim", amountToclaim);
-
-            investmentClaimed = investmentClaimed.add(investementRemainToClaim);
-            console.log("investmentClaimed", investmentClaimed);
+        
+        // INVESTOR CLAIM
+        if(investorClaimAmount > 0) {
             claims[investor] += investorClaimAmount;
-            claimsCount[investor]++;
-            gameWallet.manageBalance(false, amountToclaim);
-            mcrtToken.safeTransfer(investor, amountToclaim);
-            lastGameWalletBalance = gameWallet.pBalance(address(this));
-            
-            emit Claim(investor, amountToclaim);
-        } else {
-            playerClaimAmount = playerClaimAmount >= claims[msg.sender] ? playerClaimAmount.sub(claims[msg.sender]) : playerClaimAmount;
-            require(playerClaimAmount > 0, "claim: player remaining amount is 0");
-            claims[msg.sender] += playerClaimAmount;
-            claimsCount[msg.sender]++;
-            gameWallet.manageBalance(false, playerClaimAmount);
-            mcrtToken.safeTransfer(msg.sender, playerClaimAmount);
-            lastGameWalletBalance = gameWallet.pBalance(address(this));
-            emit Claim(msg.sender, playerClaimAmount);
+            mcrtToken.safeTransfer(investor, investorClaimAmount);
+            emit Claim(investor, investorClaimAmount);
         }
+        
+        // PLAYER CLAIM
+        if(playerClaimAmount > 0) {
+            for(uint256 i=0; i<walletsCount; i++) {
+                claims[wallets[i]] += playerClaimAmount;
+                mcrtToken.safeTransfer(wallets[i], playerClaimAmount);
+                emit Claim(wallets[i], playerClaimAmount);
+            }
+        }
+        contractBalance = mcrtToken.balanceOf(address(this));
     }
 }

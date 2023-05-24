@@ -160,7 +160,7 @@ describe.only("LendMCRT Test", () => {
     });
 
     it("Should claim if the sender is the investor and there are no wins and no losses", async function () {
-        // INVESTMENT = 500000000000
+        // INVESTMENT = 5000000000
         // The investor will be able to reclaim his whole invested amount
 
         timePeriod = 1;
@@ -174,25 +174,26 @@ describe.only("LendMCRT Test", () => {
 
         expect(+(await mcrt.balanceOf(investor.address))).to.be.equal(expectedClaimAmount);
         expect(+(await gameWallet.pBalance(lendMCRT.address))).to.be.equal(0);
+        expect(+(await mcrt.balanceOf(lendMCRT.address))).to.be.equal(0);
     });
 
     it("Should claim for one participant and the investor when there are wins", async function () {
-        // INVESTMENT = 500000000000
+        // INVESTMENT = 5000000000
         // The investor will be able to reclaim his whole invested amount PLUS 10% of the wins
-
+        console.log('--> INVESTOR DEPOSIT')
         timePeriod = 1;
         await lendMCRT.connect(owner).initialize(mcrt.address, gameWallet.address, investor.address, wallets, investedAmount, timePeriod, investorPercentage);
         await mcrt.connect(investor).approve(lendMCRT.address, investedAmount);
         await lendMCRT.connect(investor).deposit();
 
-        // // WINNER PRIZE 
+        // WIN PRIZE 
         const entryFee = 10 * 1e9;
 
         // SENDS SOME FUNDS TO ANOTHER USER TO JOIN IN THE GAME VS LendMCRT CONTRACT
         await mcrt.connect(owner).transfer(moe.address, entryFee);
         await mcrt.connect(moe).approve(gameWallet.address, entryFee);
         await gameWallet.connect(moe).manageBalance(true, entryFee);
-
+        console.log('--> WIN PRIZE')
         await gameWallet.connect(owner).winPrize(
             [
                 {
@@ -220,8 +221,9 @@ describe.only("LendMCRT Test", () => {
 
         // CALCULATE THE INVESTOR CLAIM AMOUNT
         let investorRemainingPercentage = remaining * investorPercentage / 100;
-        let expectedInvestorClaimAmount = investedAmount + investorRemainingPercentage;
         remaining = remaining - investorRemainingPercentage;
+        const investorbBalance = +(await mcrt.balanceOf(investor.address));
+        const expectedInvestorBalance = investorbBalance + investorRemainingPercentage + investedAmount;
 
         // CALCULATE THE PARTICIPANT CLAIM AMOUNT
         const bobBalance = +(await mcrt.balanceOf(bob.address));
@@ -229,52 +231,35 @@ describe.only("LendMCRT Test", () => {
 
         // A WALLET CLAIMS ITS PART
         console.log('--> BOB CLAIM')
+        console.log('investedAmount', investedAmount);
         await expect(lendMCRT.connect(bob).claim()).to.emit(lendMCRT, 'Claim');
         expect(+(await mcrt.balanceOf(bob.address))).to.be.equal(expectedParticipantBalance);
+        expect(+(await mcrt.balanceOf(investor.address))).to.be.equal(expectedInvestorBalance);
+        expect(+(await mcrt.balanceOf(lendMCRT.address))).to.be.equal(0);
 
-        // CALCULATE THE REMAINING
-        gameWalletBalance = +(await gameWallet.pBalance(lendMCRT.address));
-        remaining = gameWalletBalance - investedAmount;
-
-        // CALCULATE THE INVESTOR CLAIM AMOUNT
-        investorRemainingPercentage = remaining * investorPercentage / 100;
-        expectedInvestorClaimAmount = investedAmount + investorRemainingPercentage;
-        remaining = remaining - investorRemainingPercentage;
-
-        const expectedClaimAmount = initiaInvestorBalance + ((gameWalletBalance - investedAmount) * investorPercentage / 100);
-
-        // INVESTOR CLAIM
-        console.log('--> INVESTOR CLAIM')
-        await expect(lendMCRT.connect(investor).claim()).to.emit(lendMCRT, 'Claim');
-
-        expect((await mcrt.balanceOf(investor.address))).to.be.equal(expectedClaimAmount);
 
         // BOB TRIES TO CLAIM AGAIN
         console.log('--> BOB RE-CLAIM')
-        await expect(lendMCRT.connect(bob).claim()).to.be.revertedWith('claim: player remaining amount is 0');
-
-        // INVESTOR TRIES TO CLAIM AGAIN
-        console.log('--> INVESTOR RE-CLAIM')
-        await expect(lendMCRT.connect(investor).claim()).to.be.revertedWith('claim: investor remaining amount is 0');
+        await expect(lendMCRT.connect(bob).claim()).to.be.revertedWith('claim: game wallet balance is 0');
     });
 
-    it("Should claim for one participant and the investor when there are wins and the gamewallet is refilled", async function () {
-        // INVESTMENT = 500000000000
+    it("Should claim for one participant and the investor when there are wins and gamewallet is re-filled", async function () {
+        // INVESTMENT = 5000000000
         // The investor will be able to reclaim his whole invested amount PLUS 10% of the wins
-
+        console.log('--> INVESTOR DEPOSIT')
         timePeriod = 1;
         await lendMCRT.connect(owner).initialize(mcrt.address, gameWallet.address, investor.address, wallets, investedAmount, timePeriod, investorPercentage);
         await mcrt.connect(investor).approve(lendMCRT.address, investedAmount);
         await lendMCRT.connect(investor).deposit();
 
-        // // WINNER PRIZE 
-        const entryFee = 5 * 1e9;
+        // WIN PRIZE 
+        let entryFee = 10 * 1e9;
 
         // SENDS SOME FUNDS TO ANOTHER USER TO JOIN IN THE GAME VS LendMCRT CONTRACT
-        await mcrt.connect(owner).transfer(moe.address, entryFee * 2);
-        await mcrt.connect(moe).approve(gameWallet.address, entryFee * 2);
-        await gameWallet.connect(moe).manageBalance(true, entryFee * 2);
-
+        await mcrt.connect(owner).transfer(moe.address, entryFee);
+        await mcrt.connect(moe).approve(gameWallet.address, entryFee);
+        await gameWallet.connect(moe).manageBalance(true, entryFee);
+        console.log('--> WIN PRIZE')
         await gameWallet.connect(owner).winPrize(
             [
                 {
@@ -302,38 +287,37 @@ describe.only("LendMCRT Test", () => {
 
         // CALCULATE THE INVESTOR CLAIM AMOUNT
         let investorRemainingPercentage = remaining * investorPercentage / 100;
-        //let expectedInvestorClaimAmount = investedAmount + investorRemainingPercentage;
         remaining = remaining - investorRemainingPercentage;
+        let investorbBalance = +(await mcrt.balanceOf(investor.address));
+        let expectedInvestorBalance = investorbBalance + investorRemainingPercentage + investedAmount;
 
         // CALCULATE THE PARTICIPANT CLAIM AMOUNT
         let bobBalance = +(await mcrt.balanceOf(bob.address));
         let expectedParticipantBalance = bobBalance + (remaining / wallets.length);
 
         // A WALLET CLAIMS ITS PART
+        console.log('--> BOB CLAIM')
+        console.log('investedAmount', investedAmount);
         await expect(lendMCRT.connect(bob).claim()).to.emit(lendMCRT, 'Claim');
         expect(+(await mcrt.balanceOf(bob.address))).to.be.equal(expectedParticipantBalance);
-
-        // CALCULATE THE REMAINING
-        gameWalletBalance = +(await gameWallet.pBalance(lendMCRT.address));
-        remaining = gameWalletBalance - investedAmount;
-
-        // CALCULATE THE INVESTOR CLAIM AMOUNT
-        investorRemainingPercentage = remaining * investorPercentage / 100;
-        remaining = remaining - investorRemainingPercentage;
-
-        let expectedInvestorBalance = initiaInvestorBalance + ((gameWalletBalance - investedAmount) * investorPercentage / 100);
-
-        await expect(lendMCRT.connect(investor).claim()).to.emit(lendMCRT, 'Claim');
-
-        expect((await mcrt.balanceOf(investor.address))).to.be.equal(expectedInvestorBalance);
+        expect(+(await mcrt.balanceOf(joey.address))).to.be.equal(expectedParticipantBalance);
+        expect(+(await mcrt.balanceOf(jackie.address))).to.be.equal(expectedParticipantBalance);
+        expect(+(await mcrt.balanceOf(joey.address))).to.be.equal(expectedParticipantBalance);
+        expect(+(await mcrt.balanceOf(investor.address))).to.be.equal(expectedInvestorBalance);
+        expect(+(await mcrt.balanceOf(lendMCRT.address))).to.be.equal(0);
 
         // BOB TRIES TO CLAIM AGAIN
-        await expect(lendMCRT.connect(bob).claim()).to.be.revertedWith('claim: player remaining amount is 0');
+        console.log('--> BOB RE-CLAIM')
+        await expect(lendMCRT.connect(bob).claim()).to.be.revertedWith('claim: game wallet balance is 0');
 
-        // INVESTOR TRIES TO CLAIM AGAIN
-        await expect(lendMCRT.connect(investor).claim()).to.be.revertedWith('claim: investor remaining amount is 0');
+        // WIN PRIZE 
+        entryFee = 5 * 1e9;
 
-        // ANOTHER GAME HAS BEEN PLAYED
+        // SENDS SOME FUNDS TO ANOTHER USER TO JOIN IN THE GAME VS LendMCRT CONTRACT
+        await mcrt.connect(owner).transfer(moe.address, entryFee);
+        await mcrt.connect(moe).approve(gameWallet.address, entryFee);
+        await gameWallet.connect(moe).manageBalance(true, entryFee);
+        console.log('--> WIN PRIZE')
         await gameWallet.connect(owner).winPrize(
             [
                 {
@@ -357,29 +341,29 @@ describe.only("LendMCRT Test", () => {
 
         // CALCULATE THE REMAINING
         gameWalletBalance = +(await gameWallet.pBalance(lendMCRT.address));
-        console.log('--> gameWalletBalance', gameWalletBalance);
-        remaining = gameWalletBalance * investorPercentage / 100;
-        console.log('--> investorRemaining', remaining);
-        expectedInvestorBalance = expectedInvestorBalance + remaining;
+        remaining = gameWalletBalance;
 
-        // INVESTOR CLAIM
-        await expect(lendMCRT.connect(investor).claim()).to.emit(lendMCRT, 'Claim');
-        expect((await mcrt.balanceOf(investor.address))).to.be.equal(expectedInvestorBalance);
-
-        // INVESTOR TRIES TO CLAIM AGAIN
-        await expect(lendMCRT.connect(investor).claim()).to.be.revertedWith('claim: investor remaining amount is 0');
+        // CALCULATE THE INVESTOR CLAIM AMOUNT
+        investorRemainingPercentage = remaining * investorPercentage / 100;
+        remaining = remaining - investorRemainingPercentage;
+        investorbBalance = +(await mcrt.balanceOf(investor.address));
+        expectedInvestorBalance = investorbBalance + investorRemainingPercentage;
 
         // CALCULATE THE PARTICIPANT CLAIM AMOUNT
-        gameWalletBalance = +(await gameWallet.pBalance(lendMCRT.address));
         bobBalance = +(await mcrt.balanceOf(bob.address));
-        console.log('--> playerClaimAmount', (gameWalletBalance / wallets.length))
-        expectedParticipantBalance = bobBalance + (gameWalletBalance / wallets.length);
+        expectedParticipantBalance = bobBalance + (remaining / wallets.length);
 
-        // BOB CLAIMS ITS PART
-        await expect(lendMCRT.connect(bob).claim()).to.emit(lendMCRT, 'Claim');
-        expect((await mcrt.balanceOf(bob.address))).to.be.equal(expectedParticipantBalance);
-
-        // BOB TRIES TO CLAIM AGAIN
-        await expect(lendMCRT.connect(bob).claim()).to.be.revertedWith('claim: player remaining amount is 0');
+        // THW INVESTOR CLAIMS ITS PART
+        console.log('--> INVESTOR CLAIM')
+        console.log('investedAmount', investedAmount);
+        await expect(lendMCRT.connect(investor).claim()).to.emit(lendMCRT, 'Claim');
+        expect(+(await mcrt.balanceOf(investor.address))).to.be.equal(expectedInvestorBalance);
+        expect(+(await mcrt.balanceOf(bob.address))).to.be.equal(expectedParticipantBalance);
+        expect(+(await mcrt.balanceOf(joey.address))).to.be.equal(expectedParticipantBalance);
+        expect(+(await mcrt.balanceOf(jackie.address))).to.be.equal(expectedParticipantBalance);
+        expect(+(await mcrt.balanceOf(joey.address))).to.be.equal(expectedParticipantBalance);
+        expect(+(await mcrt.balanceOf(lendMCRT.address))).to.be.equal(0);
     });
+
+
 });
