@@ -5,7 +5,7 @@ import { ADDRESS_0 } from "./utils/constants";
 const initBalance = 1000 * 1e9;
 const prizeFeePercent = 10;
 
-describe("Starting the test suite", () => {
+describe.only("Gamewallet Test", () => {
   async function initFixture() {
     const [
       owner,
