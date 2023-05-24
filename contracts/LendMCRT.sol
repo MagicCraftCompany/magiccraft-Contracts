@@ -8,7 +8,6 @@ import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "./GameWallet/GameWallet.sol";
-import "hardhat/console.sol";
 
 /**
  * @title LendMCRT
