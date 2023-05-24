@@ -8,7 +8,12 @@ import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "./GameWallet/GameWallet.sol";
+import "hardhat/console.sol";
 
+/**
+ * @title LendMCRT
+ * @dev A contract that handles lending of MCRT tokens.
+ */
 contract LendMCRT is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeMathUpgradeable for uint256;
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -29,7 +34,7 @@ contract LendMCRT is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     mapping(address => uint256) public claims;
     mapping(address => bool) public isAuthorizedWallet;
 
-    event Deposit(address indexed from, uint256 amount);
+    event InvestmentDeposited(address indexed from, uint256 amount);
     event Claim(address indexed from, uint256 amount);
 
     /**
@@ -51,6 +56,7 @@ contract LendMCRT is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 timePeriod_,
         uint256 investorPercentage_
     ) external initializer {
+        
         require(mcrtTokenAddress_ != address(0), "initialize: Invalid MCRT token address");
         require(gameWalletAddress_ != address(0), "initialize: Invalid GameWallet address");
         require(investor_ != address(0), "initialize: Invalid investor address");
@@ -61,8 +67,7 @@ contract LendMCRT is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             investorPercentage_ > 0 && investorPercentage_ <= 100,
             "initialize: Invalid investor percentage"
         );
-
-        __Ownable_init();
+        __Ownable_init();   
         _transferOwnership(investor_);
 
         mcrtToken = IERC20Upgradeable(mcrtTokenAddress_);
@@ -82,16 +87,12 @@ contract LendMCRT is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             isAuthorizedWallet[wallet] = true;
         }
         wallets = wallets_;
-    }
 
-    /**
-     * @dev Allows the owner to deposit tokens into the contract.
-     */
-    function deposit() external onlyOwner {
-        mcrtToken.safeTransferFrom(msg.sender, address(this), investment);
-        mcrtToken.approve(address(gameWallet), investment);
+         // Deposit the investment amount to the gamewallet
+        require(mcrtToken.balanceOf(address(this)) >= investment, "initialize: insufficient contract balance");
+        mcrtToken.approve(address(gameWalletAddress_), investment);
         gameWallet.manageBalance(true, investment);
-        emit Deposit(msg.sender, investment);
+        emit InvestmentDeposited(msg.sender, investment);
     }
 
     /**
