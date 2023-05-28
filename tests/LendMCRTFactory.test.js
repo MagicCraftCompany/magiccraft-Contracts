@@ -54,7 +54,7 @@ describe.only("LendMCRTFactory Test", function () {
 
         await expect(tx)
             .to.emit(factory, 'LendMCRTCreated')
-            .withArgs(investor.address, newLendMCRTAddress);
+            .withArgs(investor.address, newLendMCRTAddress, investmentAmount, timePeriod, investorPercentage);
 
         expect(+(await mcrt.balanceOf(gameWallet.address))).to.be.equal(investmentAmount);
     });

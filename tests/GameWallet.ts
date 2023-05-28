@@ -1,7 +1,6 @@
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { ADDRESS_0 } from "./utils/constants";
 const initBalance = 1000 * 1e9;
 const prizeFeePercent = 10;
 
@@ -129,21 +128,21 @@ describe.only("Gamewallet Test", () => {
           account: bob.address,
           winningPerMille: 0,
           isWinner: false,
-          stakeholderAccount: ADDRESS_0,
+          stakeholderAccount: ethers.constants.AddressZero,
           stakeholderFeePermille: 0,
         },
         {
           account: alice.address,
           winningPerMille: 1000,
           isWinner: true,
-          stakeholderAccount: ADDRESS_0,
+          stakeholderAccount: ethers.constants.AddressZero,
           stakeholderFeePermille: 0,
         },
         {
           account: johnny.address,
           winningPerMille: 0,
           isWinner: true,
-          stakeholderAccount: ADDRESS_0,
+          stakeholderAccount: ethers.constants.AddressZero,
           stakeholderFeePermille: 0,
         },
       ],
@@ -190,14 +189,14 @@ describe.only("Gamewallet Test", () => {
           account: bob.address,
           winningPerMille: 0,
           isWinner: false,
-          stakeholderAccount: ADDRESS_0,
+          stakeholderAccount: ethers.constants.AddressZero,
           stakeholderFeePermille: 0,
         },
         {
           account: alice.address,
           winningPerMille: 1000,
           isWinner: true,
-          stakeholderAccount: ADDRESS_0,
+          stakeholderAccount: ethers.constants.AddressZero,
           stakeholderFeePermille: 0,
         },
       ],
@@ -234,7 +233,7 @@ describe.only("Gamewallet Test", () => {
         account: bob.address,
         winningPerMille: 0,
         isWinner: false,
-        stakeholderAccount: ADDRESS_0,
+        stakeholderAccount: ethers.constants.AddressZero,
         stakeholderFeePermille: 0,
       },
       {

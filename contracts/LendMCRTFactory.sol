@@ -5,7 +5,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "./GameWallet/GameWallet.sol";
 import "./LendMCRT.sol";
-
 /**
  * @title LendMCRTFactory
  * @dev A contract that deploys instances of LendMCRT.
@@ -18,9 +17,9 @@ contract LendMCRTFactory is ReentrancyGuardUpgradeable {
      */
     mapping(address => address) public getLendMCRT;
 
-    event LendMCRTCreated(address indexed creator, address lendMCRT);
-    event InvestmentDeposited(address indexed from, uint256 amount);
-
+    event LendMCRTCreated(address indexed creator, address lendMCRT, uint256 investedAmount, uint256 timePeriod, uint256 investorPercentage);
+    event WalletAdded(address indexed wallet);
+    
     /**
      * @dev Creates a new LendMCRT contract.
      * @param mcrtTokenAddress_ Address of the MCRT token.
@@ -60,6 +59,10 @@ contract LendMCRTFactory is ReentrancyGuardUpgradeable {
         // Ensure the new contract is owned by the investor
         require(newLendMCRT.owner() == msg.sender, "lendMCRT: New contract owner must be the caller of lendMCRT");
 
-        emit LendMCRTCreated(msg.sender, address(newLendMCRT));
+        emit LendMCRTCreated(msg.sender, address(newLendMCRT), investment_, timePeriod_, investorPercentage_);
+
+         for (uint i = 0; i < wallets_.length; i++) {
+            emit WalletAdded(wallets_[i]);
+        }                         
     }
 }

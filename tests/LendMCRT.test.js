@@ -1,6 +1,5 @@
 
 const { ethers } = require("hardhat");
-const { ADDRESS_0 } = require('./utils/constants');
 const initiaInvestorBalance = 10 * 1e9;
 const prizeFeePercent = 10;
 
@@ -100,7 +99,7 @@ describe.only("LendMCRT Test", () => {
         const LendMCRT = await ethers.getContractFactory("LendMCRT");
         const lendMCRT = await LendMCRT.deploy();
         await mcrt.connect(owner).transfer(lendMCRT.address, investmentAmount);
-        await expect(lendMCRT.connect(owner).initialize(ADDRESS_0, gameWallet.address, investor.address, wallets, investmentAmount, timePeriod, investorPercentage)).to.be.revertedWith('initialize: Invalid MCRT token address');
+        await expect(lendMCRT.connect(owner).initialize(ethers.constants.AddressZero, gameWallet.address, investor.address, wallets, investmentAmount, timePeriod, investorPercentage)).to.be.revertedWith('initialize: Invalid MCRT token address');
     });
 
     it("Should throw error if gameWalletAddress is address(0)", async function () {
@@ -108,7 +107,7 @@ describe.only("LendMCRT Test", () => {
         const LendMCRT = await ethers.getContractFactory("LendMCRT");
         const lendMCRT = await LendMCRT.deploy();
         await mcrt.connect(owner).transfer(lendMCRT.address, investmentAmount);
-        await expect(lendMCRT.connect(owner).initialize(mcrt.address, ADDRESS_0, investor.address, wallets, investmentAmount, timePeriod, investorPercentage)).to.be.revertedWith('initialize: Invalid GameWallet address');
+        await expect(lendMCRT.connect(owner).initialize(mcrt.address, ethers.constants.AddressZero, investor.address, wallets, investmentAmount, timePeriod, investorPercentage)).to.be.revertedWith('initialize: Invalid GameWallet address');
     });
 
     it("Should throw error if investortAddress is address(0)", async function () {
@@ -116,7 +115,7 @@ describe.only("LendMCRT Test", () => {
         const LendMCRT = await ethers.getContractFactory("LendMCRT");
         const lendMCRT = await LendMCRT.deploy();
         await mcrt.connect(owner).transfer(lendMCRT.address, investmentAmount);
-        await expect(lendMCRT.connect(owner).initialize(mcrt.address, gameWallet.address, ADDRESS_0, wallets, investmentAmount, timePeriod, investorPercentage)).to.be.revertedWith('initialize: Invalid investor address');
+        await expect(lendMCRT.connect(owner).initialize(mcrt.address, gameWallet.address, ethers.constants.AddressZero, wallets, investmentAmount, timePeriod, investorPercentage)).to.be.revertedWith('initialize: Invalid investor address');
     });
 
     it("Should throw error if one of the wallets is address(0)", async function () {
@@ -124,7 +123,7 @@ describe.only("LendMCRT Test", () => {
         const LendMCRT = await ethers.getContractFactory("LendMCRT");
         const lendMCRT = await LendMCRT.deploy();
         await mcrt.connect(owner).transfer(lendMCRT.address, investmentAmount);
-        wallets[0] = ADDRESS_0;
+        wallets[0] = ethers.constants.AddressZero;
         await expect(lendMCRT.connect(owner).initialize(mcrt.address, gameWallet.address, investor.address, wallets, investmentAmount, timePeriod, investorPercentage)).to.be.revertedWith('initialize: Invalid wallet address');
     });
 
@@ -225,14 +224,14 @@ describe.only("LendMCRT Test", () => {
                     account: lendMCRT.address,
                     winningPerMille: 1000,
                     isWinner: true,
-                    stakeholderAccount: ADDRESS_0,
+                    stakeholderAccount: ethers.constants.AddressZero,
                     stakeholderFeePermille: 0,
                 },
                 {
                     account: player5.address,
                     winningPerMille: 0,
                     isWinner: false,
-                    stakeholderAccount: ADDRESS_0,
+                    stakeholderAccount: ethers.constants.AddressZero,
                     stakeholderFeePermille: 0,
                 }
             ],
@@ -283,14 +282,14 @@ describe.only("LendMCRT Test", () => {
                     account: lendMCRT.address,
                     winningPerMille: 1000,
                     isWinner: true,
-                    stakeholderAccount: ADDRESS_0,
+                    stakeholderAccount: ethers.constants.AddressZero,
                     stakeholderFeePermille: 0,
                 },
                 {
                     account: player5.address,
                     winningPerMille: 0,
                     isWinner: false,
-                    stakeholderAccount: ADDRESS_0,
+                    stakeholderAccount: ethers.constants.AddressZero,
                     stakeholderFeePermille: 0,
                 }
             ],
@@ -339,14 +338,14 @@ describe.only("LendMCRT Test", () => {
                     account: lendMCRT.address,
                     winningPerMille: 1000,
                     isWinner: true,
-                    stakeholderAccount: ADDRESS_0,
+                    stakeholderAccount: ethers.constants.AddressZero,
                     stakeholderFeePermille: 0,
                 },
                 {
                     account: player5.address,
                     winningPerMille: 0,
                     isWinner: false,
-                    stakeholderAccount: ADDRESS_0,
+                    stakeholderAccount: ethers.constants.AddressZero,
                     stakeholderFeePermille: 0,
                 }
             ],
