@@ -10,6 +10,8 @@
     "deploy": "hardhat run deploy/deploy.ts",
     "deploy:nft": "hardhat run deploy/nft.ts",
     "deploy:network": "hardhat run deploy/deploy.ts --network",
+    "deploy:lendMacrtFactory-testnet": "hardhat run --network testnet deploy/deployLendMCRTFactory.ts ",
+    "deploy:lendMacrtFactory-mainnet": "hardhat run --network bsc deploy/deployLendMCRTFactory.ts ",
     "ganache": "yarn ganache-cli -e 1000000000000 -a 100 --networkId 999 -p 8545",
     "lint:sol": "solhint --config ./.solhint.json --max-warnings 0 \"contracts/**/*.sol\"",
     "lint:ts": "eslint --config ./.eslintrc.yaml --ignore-path ./.eslintignore --ext .js,.ts .",
