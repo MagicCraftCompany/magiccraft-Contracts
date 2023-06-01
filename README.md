@@ -39,3 +39,7 @@ or
 ```bash
 $ npm run test
 ```
+
+## Contracts:
+
+LendMCRTFactoryContract Testnet: 0x6C605Bcb0e36d4A47Dc2F529718b473F5472651C
