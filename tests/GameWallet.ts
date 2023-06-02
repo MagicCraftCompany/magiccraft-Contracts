@@ -164,12 +164,15 @@ describe.only("Starting the test suite", () => {
       "Treasury has wrong balance"
     );
 
-    const aliceFinalBalance = await gameWallet.pBalance(alice.address);
+    const aliceLockedBalance = await gameWallet.lockedBalance(alice.address);
+    const alicePBalance = await gameWallet.pBalance(alice.address);
 
-    expect(aliceFinalBalance).to.eq(
-      aliceInitBalance.add(prizePool - royalty),
+    expect(aliceLockedBalance).to.eq(
+      prizePool - royalty,
       "Alice has wrong balance"
     );
+
+    expect(alicePBalance).to.eq(aliceInitBalance, "Alice has wrong balance");
 
     expect(await gameWallet.pBalance(bob.address)).to.eq(
       balance,
@@ -462,14 +465,16 @@ describe.only("Starting the test suite", () => {
     );
 
     const toDeposit = 10000;
-    await gameWallet.connect(owner).ownerDeposit([bob.address], [toDeposit]);
 
-    const bobFinalBalance = await gameWallet.pBalance(bob.address);
+    await gameWallet.connect(owner).ownerDeposit([bob.address], [toDeposit]);
+    const bobPBalance = await gameWallet.pBalance(bob.address);
+    const bobLockedBalance = await gameWallet.lockedBalance(bob.address);
+
     const prizeFondWalletFinalBalance = await gameWallet.pBalance(
       fondWallet.address
     );
-
-    expect(bobFinalBalance).to.eq(balance + toDeposit, "Bob has wrong balance");
+    expect(bobPBalance).to.eq(balance, "Bob has wrong balance");
+    expect(bobLockedBalance).to.eq(toDeposit, "Bob has wrong balance");
     expect(
       prizeFondWalletFinalBalance.eq(prizeFondWalletInitBalance.sub(toDeposit)),
       "Prize fond wallet has wrong balance"
@@ -495,18 +500,23 @@ describe.only("Starting the test suite", () => {
       .connect(owner)
       .ownerDeposit([bob.address, joey.address, johnny.address], deposits);
 
-    const bobFinalBalance = await gameWallet.pBalance(bob.address);
+    const bobPBalance = await gameWallet.pBalance(bob.address);
+    const bobLockedBalance = await gameWallet.lockedBalance(bob.address);
     const prizeFondWalletFinalBalance = await gameWallet.pBalance(
       fondWallet.address
     );
-
-    expect(bobFinalBalance).to.eq(balance + toDeposit, "Bob has wrong balance");
-    expect(await gameWallet.pBalance(joey.address)).to.eq(
-      balance + toDeposit,
+    expect(bobPBalance).to.eq(balance, "Bob has wrong balance");
+    expect(bobLockedBalance).to.eq(toDeposit, "Bob has wrong balance");
+    expect(await gameWallet.lockedBalance(joey.address)).to.eq(
+      toDeposit,
       "Joey has wrong balance"
     );
     expect(await gameWallet.pBalance(johnny.address)).to.eq(
-      balance + johnnyDeposit,
+      balance,
+      "Johnny has wrong balance"
+    );
+    expect(await gameWallet.lockedBalance(johnny.address)).to.eq(
+      johnnyDeposit,
       "Johnny has wrong balance"
     );
     expect(
@@ -517,5 +527,66 @@ describe.only("Starting the test suite", () => {
       ),
       "Prize fond wallet has wrong balance"
     );
+  });
+
+  it("Test: lock an amount for a wallet should throw an error if the amount to lock is too big", async function () {
+    const { bob, balance, gameWallet, owner } = await loadFixture(
+      initFixtureWithBalanceInGameWallet
+    );
+    const amountToLock = 12000000000000;
+
+    await expect(
+      gameWallet.connect(owner).lockWalletAmount(bob.address, amountToLock)
+    ).to.be.revertedWith("lockWalletAmount: insufficient wallet balance");
+  });
+
+  it("Test: lock an amount for a wallet", async function () {
+    const { bob, gameWallet, owner } = await loadFixture(
+      initFixtureWithBalanceInGameWallet
+    );
+    let bobBalance = await gameWallet.connect(bob).pBalance(bob.address);
+    const amountToLock = bobBalance;
+    await gameWallet.connect(owner).lockWalletAmount(bob.address, amountToLock);
+    let lockedBalance = await gameWallet
+      .connect(bob)
+      .lockedBalance(bob.address);
+    expect(lockedBalance).to.eq(amountToLock);
+  });
+
+  it("Test: unlock an amount for a wallet should throw an error if the amount to unlock is too big", async function () {
+    const { bob, gameWallet, owner } = await loadFixture(
+      initFixtureWithBalanceInGameWallet
+    );
+    const amountToLock = 12000000000000;
+
+    await expect(
+      gameWallet.connect(owner).unlockWalletAmount(bob.address, amountToLock)
+    ).to.be.revertedWith(
+      "lockWalletAmount: insufficient locked amount balance"
+    );
+  });
+
+  it("Test: unlock an amount for a wallet", async function () {
+    const { bob, gameWallet, owner } = await loadFixture(
+      initFixtureWithBalanceInGameWallet
+    );
+    let bobPBalance = await gameWallet.connect(bob).pBalance(bob.address);
+
+    // LOCK A BALANCE
+    const amountToLock = bobPBalance;
+    await gameWallet.connect(owner).lockWalletAmount(bob.address, amountToLock);
+    let bobLockedBalance = await gameWallet
+      .connect(bob)
+      .lockedBalance(bob.address);
+    expect(bobLockedBalance).to.eq(amountToLock);
+
+    // UNLOCK THE BALANCE
+    await gameWallet
+      .connect(owner)
+      .unlockWalletAmount(bob.address, bobLockedBalance);
+    bobPBalance = await gameWallet.connect(bob).pBalance(bob.address);
+    bobLockedBalance = await gameWallet.connect(bob).lockedBalance(bob.address);
+    expect(bobPBalance).to.eq(amountToLock);
+    expect(bobLockedBalance).to.eq(0);
   });
 });
