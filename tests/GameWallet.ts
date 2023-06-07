@@ -19,6 +19,7 @@ describe.only("Starting the test suite", () => {
       moe,
       treasury,
       fondWallet,
+      emptyWallet,
     ] = await ethers.getSigners();
 
     const MCRTToken = await ethers.getContractFactory("MCRTToken");
@@ -59,12 +60,20 @@ describe.only("Starting the test suite", () => {
       mcrt,
       gameWallet,
       fondWallet,
+      emptyWallet,
     };
   }
 
   async function initFixtureWithBalanceInGameWallet() {
-    const { owner, people, treasury, mcrt, gameWallet, fondWallet } =
-      await initFixture();
+    const {
+      owner,
+      people,
+      treasury,
+      mcrt,
+      gameWallet,
+      fondWallet,
+      emptyWallet,
+    } = await initFixture();
 
     const balance = 1000000000000;
 
@@ -83,6 +92,7 @@ describe.only("Starting the test suite", () => {
       gameWallet,
       fondWallet,
       balance,
+      emptyWallet,
     };
   }
 
@@ -588,5 +598,97 @@ describe.only("Starting the test suite", () => {
     bobLockedBalance = await gameWallet.connect(bob).lockedBalance(bob.address);
     expect(bobPBalance).to.eq(amountToLock);
     expect(bobLockedBalance).to.eq(0);
+  });
+
+  it("Test: WinPrize half locked balance", async function () {
+    const { bob, gameWallet, owner, emptyWallet } = await loadFixture(
+      initFixtureWithBalanceInGameWallet
+    );
+
+    const mcrt50 = 50 * 1e9;
+
+    await gameWallet
+      .connect(owner)
+      .functions.ownerDeposit([emptyWallet.address], [mcrt50 * 2]);
+
+    await gameWallet.functions.unlockWalletAmount(emptyWallet.address, mcrt50);
+
+    const entryFee = mcrt50 * 2;
+
+    await gameWallet.connect(owner).winPrize(
+      [
+        {
+          account: bob.address,
+          winningPerMille: 1000,
+          isWinner: true,
+          stakeholderAccount: ADDRESS_0,
+          stakeholderFeePermille: 0,
+        },
+        {
+          account: emptyWallet.address,
+          winningPerMille: 0,
+          isWinner: false,
+          stakeholderAccount: ADDRESS_0,
+          stakeholderFeePermille: 0,
+        },
+      ],
+      entryFee * 2,
+      false
+    );
+
+    const poorWalletFinalBalance = await gameWallet.pBalance(
+      emptyWallet.address
+    );
+    const poorWalletLockedBalance = await gameWallet.lockedBalance(
+      emptyWallet.address
+    );
+
+    expect(poorWalletFinalBalance.eq(0)).eq(
+      true,
+      "poor wallet has wrong balance"
+    );
+    expect(poorWalletLockedBalance.eq(0)).eq(
+      true,
+      "poor wallet has wrong balance"
+    );
+  });
+
+  it("Test: WinPrize balance not enough even with locked", async function () {
+    const { bob, gameWallet, owner, emptyWallet } = await loadFixture(
+      initFixtureWithBalanceInGameWallet
+    );
+
+    const mcrt50 = 50 * 1e9;
+
+    await gameWallet
+      .connect(owner)
+      .functions.ownerDeposit([emptyWallet.address], [mcrt50 * 2]);
+
+    await gameWallet.functions.unlockWalletAmount(emptyWallet.address, mcrt50);
+
+    const entryFee = mcrt50 * 2;
+
+    expect(
+      gameWallet.connect(owner).winPrize(
+        [
+          {
+            account: bob.address,
+            winningPerMille: 1000,
+            isWinner: true,
+            stakeholderAccount: ADDRESS_0,
+            stakeholderFeePermille: 0,
+          },
+          {
+            account: emptyWallet.address,
+            winningPerMille: 0,
+            isWinner: false,
+            stakeholderAccount: ADDRESS_0,
+            stakeholderFeePermille: 0,
+          },
+        ],
+        entryFee * 3,
+        false
+      )
+    ).to.be.rejectedWith("Not enough balance deposited");
   });
 });

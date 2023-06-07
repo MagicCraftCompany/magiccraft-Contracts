@@ -155,11 +155,19 @@ contract GameWallet is OwnableUpgradeable {
 
                 if (!isWinner) {
                     require(
-                        pBalance[participantAccount] >= participantEntryFee,
+                        lockedBalance[participantAccount] + pBalance[participantAccount] >=
+                            participantEntryFee,
                         "Not enough balance deposited"
                     );
 
-                    pBalance[participantAccount] -= participantEntryFee;
+                    if (lockedBalance[participantAccount] > participantEntryFee) {
+                        lockedBalance[participantAccount] -= participantEntryFee;
+                    } else {
+                        uint256 amountToUnlock = lockedBalance[participantAccount];
+                        lockedBalance[participantAccount] = 0;
+                        pBalance[participantAccount] -= participantEntryFee - amountToUnlock;
+                    }
+
                     sum += participantEntryFee;
                     emit Deducted(participantAccount, participantEntryFee);
                 }
@@ -243,12 +251,14 @@ contract GameWallet is OwnableUpgradeable {
 
                 uint256 prizeAmount = (sum * winnerPerMille) / 1000;
 
-                if(_distributeFromPrizeFondWallet) {
+                if (_distributeFromPrizeFondWallet) {
                     lockedBalance[winnerAccount] += prizeAmount;
                     emit AmountLocked(winnerAccount, prizeAmount);
                 } else {
-                    uint256 amountToUnlock = lockedBalance[winnerAccount] > prizeAmount ? 0 : lockedBalance[winnerAccount];
-                    if(amountToUnlock > 0) {
+                    uint256 amountToUnlock = lockedBalance[winnerAccount] > prizeAmount
+                        ? 0
+                        : lockedBalance[winnerAccount];
+                    if (amountToUnlock > 0) {
                         lockedBalance[winnerAccount] -= amountToUnlock;
                         emit AmountUnlocked(winnerAccount, amountToUnlock);
                     }
@@ -358,19 +368,22 @@ contract GameWallet is OwnableUpgradeable {
     @param amount amount to lock.
      */
     function lockWalletAmount(address wallet, uint256 amount) external onlyOwner {
-        require(pBalance[wallet] >= amount, 'lockWalletAmount: insufficient wallet balance');
+        require(pBalance[wallet] >= amount, "lockWalletAmount: insufficient wallet balance");
         pBalance[wallet] -= amount;
         lockedBalance[wallet] += amount;
         emit AmountLocked(wallet, amount);
     }
 
-     /**
+    /**
     @dev Unlocks an amount for an account.
     @param wallet address of the wallet.
     @param amount amount to unlock.
      */
     function unlockWalletAmount(address wallet, uint256 amount) external onlyOwner {
-        require(lockedBalance[wallet] >= amount, 'lockWalletAmount: insufficient locked amount balance');
+        require(
+            lockedBalance[wallet] >= amount,
+            "lockWalletAmount: insufficient locked amount balance"
+        );
         lockedBalance[wallet] -= amount;
         pBalance[wallet] += amount;
         emit AmountUnlocked(wallet, amount);
