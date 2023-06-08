@@ -689,6 +689,6 @@ describe.only("Starting the test suite", () => {
         entryFee * 3,
         false
       )
-    ).to.be.rejectedWith("Not enough balance deposited");
+    ).to.be.revertedWith("Not enough balance deposited");
   });
 });
