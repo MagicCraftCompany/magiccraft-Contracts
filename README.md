@@ -39,3 +39,7 @@ or
 ```bash
 $ npm run test
 ```
+
+## REVEAL NFT CONTRACT
+
+0x88Bb5450e0940a8e2D7c0Fd703d62944F9679DD9
