@@ -8,7 +8,7 @@
     "compile": "hardhat compile",
     "coverage": "npx hardhat coverage --solcoverjs ./.solcover.js --temp artifacts --testfiles \"./tests/**/*.ts\"",
     "deploy": "hardhat run deploy/deploy.ts",
-    "deploy:nft": "hardhat run deploy/nft.ts",
+    "deploy:Revelation": "hardhat run deploy/deployRevelation.ts --network bsc",
     "deploy:network": "hardhat run deploy/deploy.ts --network",
     "ganache": "yarn ganache-cli -e 1000000000000 -a 100 --networkId 999 -p 8545",
     "lint:sol": "solhint --config ./.solhint.json --max-warnings 0 \"contracts/**/*.sol\"",
