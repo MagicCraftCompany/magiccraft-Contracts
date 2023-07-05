@@ -5,15 +5,20 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
-import "./ERC721AUpgradeable.sol";
+import "./upgradeable/ERC721AUpgradeablev4.sol";
 import "./MagicSigner.sol";
+
+import {DefaultOperatorFiltererUpgradeable} from "./opensea/DefaultOperatorFiltererUpgradeable.sol";
+import {ERC2981Upgradeable} from "@openzeppelin/contracts-upgradeable/token/common/ERC2981Upgradeable.sol";
 
 contract Revelation is
     MagicSigner,
     ERC721AUpgradeable,
     ReentrancyGuardUpgradeable,
     OwnableUpgradeable,
-    PausableUpgradeable
+    PausableUpgradeable,
+    DefaultOperatorFiltererUpgradeable,
+    ERC2981Upgradeable
 {
     string public baseTokenURI;
 
@@ -40,13 +45,6 @@ contract Revelation is
     mapping(address => uint256) public whiteListSpotBought;
     mapping(address => uint256) public publicMintSpotBought;
     mapping(address => bool) public minters;
-
-    bytes4 private constant _INTERFACE_ID_ERC2981 = 0x2a55205a;
-
-    struct RoyaltyInfo {
-        address receiver;
-        uint96 royaltyFraction;
-    }
 
     RoyaltyInfo private _defaultRoyaltyInfo;
     mapping(uint256 => RoyaltyInfo) private _tokenRoyaltyInfo;
@@ -80,7 +78,7 @@ contract Revelation is
         uint256 maxSupply_,
         address treasure_,
         address designatedSigner_
-    ) public initializer {
+    ) public initializer initializerERC721A {
         require(designatedSigner_ != address(0), "Invalid designated signer address");
         require(treasure_ != address(0), "Invalid treasure address");
 
@@ -88,6 +86,7 @@ contract Revelation is
         __MagicSigner_init();
         __ERC721A_init(name_, symbol_);
         __Ownable_init();
+        __DefaultOperatorFilterer_init();
 
         maxWhiteListMintForEach = 1;
         maxPublicMintForEach = 1;
@@ -124,8 +123,8 @@ contract Revelation is
         require(msg.value == _amount * whiteListPriceForEach, "Pay Exact Amount");
         whiteListMinted += _amount;
         whiteListSpotBought[_whitelist.userAddress] += _amount;
-
-        for (uint256 i = _currentIndex; i <= _currentIndex + _amount; i++) {
+        uint256 currentIdex = _nextTokenId();
+        for (uint256 i = currentIdex; i <= currentIdex + _amount; i++) {
             _setTokenRoyalty(i, msg.sender, ROYALTY_PERCENT);
         }
 
@@ -165,8 +164,8 @@ contract Revelation is
 
         // 10% discount by sending one more NFT per 10 NFTs
         if (!isVCSale) _amount += _amount / 10;
-
-        for (uint256 i = _currentIndex; i <= _currentIndex + _amount; i++) {
+        uint256 currentIdex = _nextTokenId();
+        for (uint256 i = currentIdex; i <= currentIdex + _amount; i++) {
             _setTokenRoyalty(i, msg.sender, ROYALTY_PERCENT);
         }
 
@@ -183,8 +182,8 @@ contract Revelation is
         for (uint256 i = 0; i < _account.length; i++) {
             require(totalSupply() + _amount[i] <= MAX_SUPPLY, "Token all minted");
             require(_account[i] != address(0), "Invalid receiver address");
-
-            for (uint256 j = _currentIndex; j <= _currentIndex + _amount[i]; j++) {
+            uint256 currentIdex = _nextTokenId();
+            for (uint256 j = currentIdex; j <= currentIdex + _amount[i]; j++) {
                 _setTokenRoyalty(j, _account[i], ROYALTY_PERCENT);
             }
 
@@ -216,10 +215,6 @@ contract Revelation is
     function setVCInfo(address _vcAccount, uint256 _amount) external onlyOwner {
         require(_vcAccount != address(0), "Invalid address for vc account");
         vcInfo[_vcAccount] = _amount;
-    }
-
-    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
-        return interfaceId == _INTERFACE_ID_ERC2981 || super.supportsInterface(interfaceId);
     }
 
     /////////////////
@@ -306,40 +301,9 @@ contract Revelation is
         return baseTokenURI;
     }
 
-    ///////////////
-    /// Royalty ///
-    ///////////////
-
-    function royaltyInfo(uint256 _tokenId, uint256 _salePrice)
-        public
-        view
-        returns (address, uint256)
-    {
-        RoyaltyInfo memory royalty = _tokenRoyaltyInfo[_tokenId];
-
-        if (royalty.receiver == address(0)) {
-            royalty = _defaultRoyaltyInfo;
-        }
-
-        uint256 royaltyAmount = (_salePrice * royalty.royaltyFraction) / _feeDenominator();
-
-        return (royalty.receiver, royaltyAmount);
-    }
-
-    function _feeDenominator() internal pure virtual returns (uint96) {
-        return 10000;
-    }
-
-    function _setTokenRoyalty(
-        uint256 tokenId,
-        address receiver,
-        uint96 feeNumerator
-    ) internal virtual {
-        require(feeNumerator <= _feeDenominator(), "ERC2981: royalty fee will exceed salePrice");
-        require(receiver != address(0), "ERC2981: Invalid parameters");
-
-        _tokenRoyaltyInfo[tokenId] = RoyaltyInfo(receiver, feeNumerator);
-    }
+    ///////////////////////////
+    /// Opensea integration ///
+    ///////////////////////////
 
     function _beforeTokenTransfers(
         address from,
@@ -348,5 +312,62 @@ contract Revelation is
         uint256 quantity
     ) internal virtual override whenNotPaused {
         super._beforeTokenTransfers(from, to, startTokenId, quantity);
+    }
+
+    /**
+     * @dev See {IERC721-setApprovalForAll}.
+     *      In this example the added modifier ensures that the operator is allowed by the OperatorFilterRegistry.
+     */
+    function setApprovalForAll(address operator, bool approved) public override onlyAllowedOperatorApproval(operator) {
+        super.setApprovalForAll(operator, approved);
+    }
+
+    /**
+     * @dev See {IERC721-approve}.
+     *      In this example the added modifier ensures that the operator is allowed by the OperatorFilterRegistry.
+     */
+    function approve(address operator, uint256 tokenId) public payable override onlyAllowedOperatorApproval(operator) {
+        super.approve(operator, tokenId);
+    }
+
+    /**
+     * @dev See {IERC721-transferFrom}.
+     *      In this example the added modifier ensures that the operator is allowed by the OperatorFilterRegistry.
+     */
+    function transferFrom(address from, address to, uint256 tokenId) public payable override onlyAllowedOperator(from) {
+        super.transferFrom(from, to, tokenId);
+    }
+
+    /**
+     * @dev See {IERC721-safeTransferFrom}.
+     *      In this example the added modifier ensures that the operator is allowed by the OperatorFilterRegistry.
+     */
+    function safeTransferFrom(address from, address to, uint256 tokenId) public payable override onlyAllowedOperator(from) {
+        super.safeTransferFrom(from, to, tokenId);
+    }
+
+    /**
+     * @dev See {IERC721-safeTransferFrom}.
+     *      In this example the added modifier ensures that the operator is allowed by the OperatorFilterRegistry.
+     */
+    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data)
+        public payable
+        override
+        onlyAllowedOperator(from)
+    {
+        super.safeTransferFrom(from, to, tokenId, data);
+    }
+
+    /**
+     * @dev See {IERC165-supportsInterface}.
+     */
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(ERC721AUpgradeable, ERC2981Upgradeable)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
     }
 }
