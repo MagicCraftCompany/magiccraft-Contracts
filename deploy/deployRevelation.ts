@@ -12,40 +12,37 @@ async function main() {
   const Revelation = await ethers.getContractFactory("Revelation");
   const owner = ethers.provider.getSigner();
 
-  // DEPLOY
+  // DEPLOY proxy contract and INITIALIZATION
   console.log("START DEPLOY...");
-  const contract = await upgrades.deployProxy(Revelation);
+  const contract = await upgrades.deployProxy(Revelation, [
+    collectionName,
+    symbol,
+    supply,
+    treasureAddress,
+    signerAddress,
+  ]);
   await new Promise((resolve) => setTimeout(resolve, 2000));
   console.log(`Contract deployed to ${contract.address}`);
-
-  // INITIALISE
-  console.log("INITIALIZING CONTRACT...");
-  let tx = await contract
-    .connect(owner)
-    .initialize(collectionName, symbol, supply, treasureAddress, signerAddress);
-  await tx.wait();
-  await new Promise((resolve) => setTimeout(resolve, 2000));
-  console.log("CONTRACT INITIALIZED.");
 
   // const contractAddress = process.env.REVELATION_NFT_CONTRACT_ADDRESS || "";
   // const contract = Revelation.attach(contractAddress); // The deployed contract address);
 
-  // SET MINTER
-  console.log("SETTING MINTER...");
-  tx = await contract.connect(owner).setMinter(ownerAddress, true);
-  await tx.wait();
-  await new Promise((resolve) => setTimeout(resolve, 2000));
-  console.log("MINTER SET");
-
   // SET BASE URI
   console.log("SET BASE TOKEN URI...");
-  tx = await contract
+  let tx = await contract
     .connect(owner)
     .setBaseURI(process.env.REVELATION_NFT_BASE_URI);
 
   await tx.wait();
   await new Promise((resolve) => setTimeout(resolve, 2000));
   console.log("TOKEN URI SET.");
+
+  // SET MINTER
+  console.log("SETTING MINTER...");
+  tx = await contract.connect(owner).setMinter(contract.address, true);
+  await tx.wait();
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  console.log("MINTER SET");
 
   // VERIFICATION
   console.log("START VERIFICATION...");
@@ -55,11 +52,11 @@ async function main() {
   });
   console.log("CONTRACT VERIFIED");
 
-  // //TRANSFER OWNERSHIP
-  // console.log("TRANSFERRING OWNERSHIP...");
-  // tx = await contract.connect(owner).transferOwnership(ownerAddress);
-  // await tx.wait();
-  // console.log("Owner", await contract.owner());
+  //TRANSFER OWNERSHIP
+  console.log("TRANSFERRING OWNERSHIP...");
+  tx = await contract.connect(owner).transferOwnership(ownerAddress);
+  await tx.wait();
+  console.log("Owner", await contract.owner());
 
   console.log("Done.");
 }

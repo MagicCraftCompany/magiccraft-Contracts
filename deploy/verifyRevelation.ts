@@ -1,4 +1,4 @@
-import hre, { ethers } from "hardhat";
+import hre from "hardhat";
 
 async function main() {
   await hre.run("verify:verify", {

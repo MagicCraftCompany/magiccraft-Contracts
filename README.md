@@ -14,9 +14,9 @@
 https://bscscan.com/address/0xBF4D4886554a5FDEFFf07aeA90EC37d24260E7A7
 
 **Revelation:**
-https://bscscan.com/address/0x88Bb5450e0940a8e2D7c0Fd703d62944F9679DD9
+https://bscscan.com/address/0xafc9f628220EB9EFc313dED8D131253F633F6bE9
 
-## bsc-testnet
+## goerli-testnet
 
 **Revelation:**
-https://testnet.bscscan.com/address/0x5094B7AC6fdB27b7A18E5429087bb71e349DA0C8
+https://goerli.etherscan.io/address/0xaEe275B26F585ee284efc07D6E97a9AdA32A7Cf8

@@ -14,6 +14,7 @@
     "verify:Revelation": "hardhat run deploy/verifyRevelation.ts --network bsc",
     "sale:Revelation": "hardhat run scripts/nft/sale-revealation.js --network bsc",
     "test:Revelation": "hardhat test tests/revelation-nft-collection.test.js --network hardhat",
+    "read-write:Revelation": "hardhat run scripts/nft/read-write-contract-revelation.ts --network bsc",
     "ganache": "yarn ganache-cli -e 1000000000000 -a 100 --networkId 999 -p 8545",
     "lint:sol": "solhint --config ./.solhint.json --max-warnings 0 \"contracts/**/*.sol\"",
     "lint:ts": "eslint --config ./.eslintrc.yaml --ignore-path ./.eslintignore --ext .js,.ts .",
