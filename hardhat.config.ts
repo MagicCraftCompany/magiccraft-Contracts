@@ -38,7 +38,7 @@ const config = {
     },
   },
   etherscan: {
-    apiKey: process.env.BSCSCAN_API,
+    apiKey: "J72YCNZCIFWB2A5D16EGT8HDG4WV996I47", //process.env.BSCSCAN_API,
   },
   paths: {
     artifacts: "./artifacts",

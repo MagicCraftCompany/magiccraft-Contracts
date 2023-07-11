@@ -98,8 +98,8 @@ contract Revelation is
 
         treasure = payable(treasure_);
         designatedSigner = designatedSigner_;
-        whiteListPriceForEach = 0.75 ether;
-        publicMintPriceForEach = 0.75 ether;
+        whiteListPriceForEach = 0.20228774617173184 ether;
+        publicMintPriceForEach = 0.20228774617173184 ether;
     }
 
     function ownerMint(uint256 _amount) external onlyOwner notOverMaxSupply(_amount) {
