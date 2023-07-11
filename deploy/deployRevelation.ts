@@ -1,4 +1,4 @@
-import hre, { ethers } from "hardhat";
+import hre, { ethers, upgrades } from "hardhat";
 
 // Revelation, ticker RVL
 const treasureAddress = "0xe422fcfb60d213a8d555511e82e9a8b0d728c9f0";
@@ -14,8 +14,7 @@ async function main() {
 
   // DEPLOY
   console.log("START DEPLOY...");
-  let contract = await Revelation.connect(owner).deploy();
-  contract = await contract.deployed();
+  const contract = await upgrades.deployProxy(Revelation);
   await new Promise((resolve) => setTimeout(resolve, 2000));
   console.log(`Contract deployed to ${contract.address}`);
 
@@ -56,11 +55,12 @@ async function main() {
   });
   console.log("CONTRACT VERIFIED");
 
-  //TRANSFER OWNERSHIP
-  console.log("TRANSFERRING OWNERSHIP...");
-  tx = await contract.connect(owner).transferOwnership(ownerAddress);
-  await tx.wait();
-  console.log("Owner", await contract.owner());
+  // //TRANSFER OWNERSHIP
+  // console.log("TRANSFERRING OWNERSHIP...");
+  // tx = await contract.connect(owner).transferOwnership(ownerAddress);
+  // await tx.wait();
+  // console.log("Owner", await contract.owner());
+
   console.log("Done.");
 }
 
