@@ -27,13 +27,18 @@ const config = {
       url: `https://bsc-dataseed.binance.org/`,
       accounts: [process.env.MAINNET_PRIVKEY],
     },
-    testnet: {
+    bsc_testnet: {
       url: `https://data-seed-prebsc-1-s1.binance.org:8545/`,
       accounts: [process.env.MAINNET_PRIVKEY],
     },
+    goerly: {
+      url: `https://eth-goerli.g.alchemy.com/v2/To8q4iJy9jTiWeGNmhLT-lBnFFtlQzcY`,
+      accounts: [process.env.MAINNET_PRIVKEY],
+      //gasPrice: 370000000000,
+    },
   },
   etherscan: {
-    apiKey: process.env.BSCSCAN_API,
+    apiKey: process.env.BSCSCAN_API, //"J72YCNZCIFWB2A5D16EGT8HDG4WV996I47",
   },
   paths: {
     artifacts: "./artifacts",

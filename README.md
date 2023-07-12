@@ -1,41 +1,22 @@
-## Install
+## Scripts:
 
-Install dependencies:
+     - npm run deploy:MCRTStaking
+     - npm run deploy:GameWallet
+     - npm run deploy:Revelation
+     - npm run sale:Revelation -> to list the collection on Opensea
+     - npm run test:Revelation
 
-```bash
-$ yarn
-```
+## Deployed Contracts:
 
-or
+## bsc
 
-```bash
-$ npm install
-```
+**Genesis:**
+https://bscscan.com/address/0xBF4D4886554a5FDEFFf07aeA90EC37d24260E7A7
 
-## Compile
+**Revelation:**
+https://bscscan.com/address/0xafc9f628220EB9EFc313dED8D131253F633F6bE9
 
-Compile smart contracts and create typechain:
+## goerli-testnet
 
-```bash
-$ yarn compile
-```
-
-or
-
-```bash
-$ npm run compile
-```
-
-## Test
-
-Test smart contracts against ./tests:
-
-```bash
-$ yarn test
-```
-
-or
-
-```bash
-$ npm run test
-```
+**Revelation:**
+https://goerli.etherscan.io/address/0xaEe275B26F585ee284efc07D6E97a9AdA32A7Cf8
